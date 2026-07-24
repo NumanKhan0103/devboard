@@ -28,6 +28,23 @@ spec:
     - {{ .Values.gateway.hostname | quote }}
   {{- end }}
   rules:
+    {{- if .Values.ai.enabled }}
+    # /api/ai/* → ai-service (longer prefix wins). Strip the /api/ai prefix so
+    # the service sees /summarise, /ask, etc.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/ai
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: {{ .Values.ai.serviceName }}
+          port: {{ .Values.ai.port }}
+    {{- end }}
     - matches:
         - path:
             type: PathPrefix

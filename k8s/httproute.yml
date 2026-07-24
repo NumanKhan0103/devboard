@@ -22,6 +22,22 @@ spec:
   parentRefs:
     - name: devboard-gateway
   rules:
+    # /api/ai/* → ai-service. A longer prefix than "/", so it wins for AI calls.
+    # URLRewrite strips "/api/ai" so the service sees /summarise, /ask, etc.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/ai
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: ai-service
+          port: 3005
+    # everything else → frontend (which proxies /api → backend internally)
     - matches:
         - path:
             type: PathPrefix

@@ -17,7 +17,8 @@ spec:
     spec:
       containers:
       - name: devboard-frontend
-        image: trainwithshubham/devboard-frontend:latest
+        # ":ai" includes the AI Assistant page (rebuilt image).
+        image: trainwithshubham/devboard-frontend:ai
         ports:
         - containerPort: 4173
         resources:

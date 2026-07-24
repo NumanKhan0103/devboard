@@ -68,7 +68,8 @@ backend:
 frontend:
   image:
     repository: trainwithshubham/devboard-frontend
-    tag: latest
+    # ":ai" is the rebuilt image that includes the AI Assistant page.
+    tag: ai
     pullPolicy: IfNotPresent
   replicas: 1
   containerPort: 4173
@@ -89,6 +90,33 @@ frontend:
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 60
+
+# -----------------------------------------------------------------------------
+# AI service (Flask, streaming SSE). Grounds answers in the project's tasks
+# (fetched from the backend) and streams from an OpenAI-compatible model server.
+# Reached from the browser under /api/ai/* (Gateway route + frontend proxy).
+# -----------------------------------------------------------------------------
+ai:
+  enabled: true
+  image:
+    repository: trainwithshubham/devboard-ai-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  serviceName: ai-service
+  port: 3005
+  # Where to fetch task context (the Go backend in this release's namespace).
+  taskServiceUrl: http://backend:8080
+  # Shared, cluster-wide Ollama model server (OpenAI-compatible). No API key.
+  ollamaUrl: http://ollama.ollama.svc.cluster.local:11434/v1
+  modelName: llama3.2:1b
+  resources:
+    requests:
+      cpu: 25m
+      memory: 96Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
 
 # -----------------------------------------------------------------------------
 # Gateway API (Envoy Gateway). Creates a Gateway + HTTPRoute so the app gets a

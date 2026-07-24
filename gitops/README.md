@@ -55,6 +55,7 @@ frontend — traffic to the backend stays inside the cluster.
 | 6 | [`06-package-with-helm.md`](06-package-with-helm.md) | Tour the Helm chart, render it locally |
 | 7 | [`07-deploy-with-helm.md`](07-deploy-with-helm.md) | Deploy the chart via ArgoCD |
 | 8 | [`08-cleanup.md`](08-cleanup.md) | Tear everything down so you stop paying |
+| 9 | [`09-ai-feature.md`](09-ai-feature.md) | Add a self-hosted AI Assistant (Ollama, free) |
 
 ---
 

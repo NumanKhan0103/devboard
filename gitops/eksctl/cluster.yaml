@@ -21,7 +21,9 @@ iam:
 managedNodeGroups:
   - name: ng-default
     instanceType: t3.medium
-    desiredCapacity: 2
+    # 3 nodes: the extra headroom is for the in-cluster Ollama model server
+    # (see gitops/09-ai-feature.md). Drop to 2 if you skip the AI feature.
+    desiredCapacity: 3
     minSize: 2
     maxSize: 3
     volumeSize: 20   # GiB, root disk per node
