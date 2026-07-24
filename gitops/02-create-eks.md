@@ -35,15 +35,30 @@ kubectl get storageclass
 kubectl -n kube-system get pods | grep ebs-csi
 ```
 
-You should see 2 `Ready` nodes, a `gp2 (default)` StorageClass, and a few
-`ebs-csi-*` pods `Running`.
+You should see 2 `Ready` nodes, a `gp2` StorageClass, and a few `ebs-csi-*`
+pods `Running`.
+
+## 2.4 Make `gp2` the default StorageClass ⚠️
+
+On current EKS, the `gp2` StorageClass is **not** marked as the cluster default.
+Our Postgres claim doesn't name a StorageClass (it relies on the default), so
+without this step the claim sits `Pending` forever. Mark `gp2` as default:
+
+```bash
+kubectl patch storageclass gp2 \
+  -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+
+# confirm it now shows "gp2 (default)"
+kubectl get storageclass
+```
 
 > **Why we care about EBS here:** Postgres runs as a StatefulSet with a
-> PersistentVolumeClaim. Without the EBS CSI driver, that claim would sit
-> `Pending` forever (we actually saw this failure mode on a local cluster).
-> On EKS the driver provisions the disk automatically.
+> PersistentVolumeClaim. Without a default StorageClass the claim can't be
+> provisioned and stays `Pending`; without the EBS CSI driver there'd be nothing
+> to fulfil it either. With both in place, the disk is created automatically.
 
 ---
 
-✅ `kubectl get nodes` shows 2 Ready nodes; `gp2` StorageClass present.
+✅ `kubectl get nodes` shows 2 Ready nodes; `kubectl get storageclass` shows
+`gp2 (default)`.
 Next: [`03-gateway-api.md`](03-gateway-api.md)

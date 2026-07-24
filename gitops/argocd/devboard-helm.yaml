@@ -25,6 +25,13 @@ spec:
     server: https://kubernetes.default.svc
     namespace: devboard-helm
 
+  # The frontend Deployment's replica count is owned by the HPA, not Git.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+
   syncPolicy:
     automated:
       prune: true

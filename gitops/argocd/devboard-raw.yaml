@@ -18,6 +18,15 @@ spec:
     server: https://kubernetes.default.svc
     namespace: devboard
 
+  # The frontend Deployment's replica count is owned by the HPA, not Git.
+  # Without this, selfHeal and the HPA fight over /spec/replicas forever
+  # (the app never settles on Synced).
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+
   syncPolicy:
     automated:
       prune: true      # delete resources removed from Git
