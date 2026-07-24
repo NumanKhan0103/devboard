@@ -41,6 +41,10 @@ spec:
             path:
               type: ReplacePrefixMatch
               replacePrefixMatch: /
+      # CPU inference streams slowly — raise the default (~15s) route timeout.
+      timeouts:
+        request: "300s"
+        backendRequest: "300s"
       backendRefs:
         - name: {{ .Values.ai.serviceName }}
           port: {{ .Values.ai.port }}

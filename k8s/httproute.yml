@@ -34,6 +34,11 @@ spec:
             path:
               type: ReplacePrefixMatch
               replacePrefixMatch: /
+      # CPU inference streams slowly — raise the default (~15s) route timeout so
+      # Envoy doesn't cut off the SSE response.
+      timeouts:
+        request: "300s"
+        backendRequest: "300s"
       backendRefs:
         - name: ai-service
           port: 3005
