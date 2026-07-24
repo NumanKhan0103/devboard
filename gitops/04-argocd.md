@@ -1,62 +1,31 @@
 # Step 4 — Install ArgoCD
 
-ArgoCD is our **GitOps engine**. You point it at a Git repo + path, and it makes
-the cluster match what's in Git — and keeps it that way.
-
-## 4.1 Install with Helm
+ArgoCD is the GitOps engine: point it at a repo + path and it keeps the cluster
+matching Git.
 
 ```bash
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update
-
-helm install argocd argo/argo-cd \
-  --namespace argocd --create-namespace \
+helm install argocd argo/argo-cd -n argocd --create-namespace \
   -f gitops/argocd/install-values.yaml
-
-# wait for the API server to be ready
 kubectl -n argocd rollout status deploy/argocd-server
 ```
+(`install-values.yaml` sets `server.insecure: true` so the port-forward below
+works over plain HTTP. Add TLS for real use.)
 
-> Our [`install-values.yaml`](argocd/install-values.yaml) sets
-> `server.insecure: true` so the UI serves plain HTTP — that keeps the
-> port-forward below simple. Fine for learning; add TLS for anything real.
-
-## 4.2 Get the admin password
-
-ArgoCD generates a random `admin` password on first install:
+## Log in
 
 ```bash
+# initial admin password
 kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath='{.data.password}' | base64 -d ; echo
-```
 
-Copy that value.
-
-## 4.3 Open the UI
-
-```bash
+# UI
 kubectl -n argocd port-forward svc/argocd-server 8080:80
 ```
+Open http://localhost:8080 → user `admin` + that password.
 
-Now open **http://localhost:8080** and log in:
+We register apps by `kubectl apply`-ing `Application` manifests (that's GitOps),
+not by clicking in the UI. That's the next step.
 
-- **Username:** `admin`
-- **Password:** the value from 4.2
-
-(Optional) log in with the CLI too:
-
-```bash
-argocd login localhost:8080 --username admin --password '<paste>' --insecure
-```
-
-## 4.4 What happens next
-
-We won't create apps in the UI — that wouldn't be GitOps. Instead we `kubectl
-apply` two small **Application** manifests (they live in
-[`argocd/`](argocd/)). Each tells ArgoCD which repo, branch, and path to watch.
-From then on, ArgoCD does the deploying.
-
----
-
-✅ ArgoCD UI reachable at http://localhost:8080, logged in as `admin`.
-Next: [`05-deploy-without-helm.md`](05-deploy-without-helm.md)
+Next: [05-deploy-without-helm.md](05-deploy-without-helm.md)

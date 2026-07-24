@@ -1,93 +1,50 @@
-# DevBoard on EKS — a GitOps journey with ArgoCD, Helm & the Gateway API
+# DevBoard on EKS — GitOps with ArgoCD, Helm & Gateway API
 
-Welcome! 👋 This folder turns DevBoard (our little React + Go + Postgres task
-tracker) into a **real cloud deployment** you can build with your own hands.
+Deploy DevBoard (React + Go + Postgres) to a real EKS cluster, GitOps-style, and
+add a self-hosted AI feature. No Terraform — just `eksctl` and Kubernetes.
 
-By the end you will have:
+You'll set up:
+- **EKS** via `eksctl` (one YAML file)
+- **Envoy Gateway** for a public URL (Gateway API → AWS NLB)
+- **ArgoCD** deploying the app from this Git branch — **two ways**: raw manifests
+  (`k8s/`) and a Helm chart (`helm/devboard/`)
+- **AI Assistant** — an in-cluster model (Ollama) that summarises/answers about your tasks
 
-- An **EKS** cluster created with **eksctl** — one YAML file, no Terraform.
-- **Envoy Gateway** giving the app a public URL through the **Gateway API**.
-- **ArgoCD** doing GitOps: it watches this Git branch and deploys the app for you.
-- The same app deployed **two ways** so you can feel the difference:
-  1. **Without Helm** — ArgoCD applies the raw manifests in [`../k8s/`](../k8s/).
-  2. **With Helm** — ArgoCD renders our chart in [`../helm/devboard/`](../helm/devboard/).
-
-No prior GitOps experience needed. Each step lives in its own file and is meant
-to be read top-to-bottom.
-
----
-
-## The big picture
+## Architecture
 
 ```
-        you push to Git (branch: gitops)
-                    │
-                    ▼
-   ┌─────────────────────────────────┐
-   │            ArgoCD               │  watches the repo, syncs the cluster
-   └─────────────────────────────────┘
-                    │ deploys
-                    ▼
-   ┌─────────────────────────────────┐
-   │   EKS cluster (created by eksctl)│
-   │                                 │
-   │   Internet ──▶ Envoy Gateway ──▶ frontend ──/api──▶ backend ──▶ postgres
-   │                (AWS NLB)         (React)            (Go/Gin)    (StatefulSet)
-   └─────────────────────────────────┘
+Internet ─▶ Envoy Gateway (NLB) ─▶ frontend ─┬─ /api    ─▶ backend ─▶ postgres
+                                              └─ /api/ai ─▶ ai-service ─▶ Ollama
 ```
+The frontend proxies `/api` to the backend internally, so the Gateway only points at the frontend.
 
-One thing worth knowing up front: the **frontend already proxies `/api` to the
-backend internally**. That is why the Gateway only needs to point at the
-frontend — traffic to the backend stays inside the cluster.
+## Steps
 
----
+| # | File | What |
+|---|------|------|
+| 1 | [01-prerequisites.md](01-prerequisites.md) | Install tools, configure AWS |
+| 2 | [02-create-eks.md](02-create-eks.md) | Create the cluster |
+| 3 | [03-gateway-api.md](03-gateway-api.md) | Install Envoy Gateway |
+| 4 | [04-argocd.md](04-argocd.md) | Install ArgoCD |
+| 5 | [05-deploy-without-helm.md](05-deploy-without-helm.md) | Deploy from raw manifests |
+| 6 | [06-package-with-helm.md](06-package-with-helm.md) | Tour the Helm chart |
+| 7 | [07-deploy-with-helm.md](07-deploy-with-helm.md) | Deploy from the chart |
+| 8 | [08-cleanup.md](08-cleanup.md) | Tear it all down |
+| 9 | [09-ai-feature.md](09-ai-feature.md) | Add the AI Assistant |
 
-## Follow the steps in order
+## Cost
 
-| Step | File | What you do |
-| --- | --- | --- |
-| 0 | **this file** | Understand the plan |
-| 1 | [`01-prerequisites.md`](01-prerequisites.md) | Install eksctl / kubectl / helm / awscli, configure AWS |
-| 2 | [`02-create-eks.md`](02-create-eks.md) | Create the EKS cluster + storage add-on |
-| 3 | [`03-gateway-api.md`](03-gateway-api.md) | Install Envoy Gateway, create the GatewayClass |
-| 4 | [`04-argocd.md`](04-argocd.md) | Install ArgoCD, log in |
-| 5 | [`05-deploy-without-helm.md`](05-deploy-without-helm.md) | Deploy the raw manifests via ArgoCD |
-| 6 | [`06-package-with-helm.md`](06-package-with-helm.md) | Tour the Helm chart, render it locally |
-| 7 | [`07-deploy-with-helm.md`](07-deploy-with-helm.md) | Deploy the chart via ArgoCD |
-| 8 | [`08-cleanup.md`](08-cleanup.md) | Tear everything down so you stop paying |
-| 9 | [`09-ai-feature.md`](09-ai-feature.md) | Add a self-hosted AI Assistant (Ollama, free) |
+EKS is not free: control plane + 3 × t3.medium + one NLB per Gateway + EBS ≈ a
+few USD/day. **Do [08-cleanup.md](08-cleanup.md) when you're done.**
 
----
-
-## 💸 Cost & safety — please read
-
-EKS is **not free**. While this cluster runs you pay for:
-
-- the EKS control plane (~$0.10/hour),
-- 2 × `t3.medium` worker nodes,
-- one **AWS NLB per Gateway** (each deployment path creates its own Gateway),
-- a small EBS volume for Postgres.
-
-Rough order of magnitude: **a few US dollars per day**. That is fine for a day of
-learning, but **do [`08-cleanup.md`](08-cleanup.md) when you are done.** You can
-also run just one of the two deployment paths to save one NLB.
-
----
-
-## Repo layout this journey adds
+## Layout
 
 ```
-gitops/
-  01..08-*.md            step-by-step docs (this journey)
-  eksctl/cluster.yaml    the EKS cluster definition
-  gateway/gatewayclass.yaml   ties the name "envoy" to the controller
-  argocd/
-    install-values.yaml  Helm values for ArgoCD itself
-    devboard-raw.yaml     ArgoCD App → raw k8s/ manifests
-    devboard-helm.yaml    ArgoCD App → helm/devboard chart
-
-helm/devboard/           the DevBoard Helm chart (values.yaml + templates/)
-k8s/                     the raw manifests (now with gateway.yml + httproute.yml)
+gitops/eksctl/cluster.yaml   the cluster definition
+gitops/gateway/              GatewayClass
+gitops/ollama/               shared in-cluster model server
+gitops/argocd/               ArgoCD install values + Applications
+helm/devboard/               the Helm chart
+k8s/                         raw manifests
+ai-service/                  the AI microservice (Python/Flask)
 ```
-
-Ready? Start with [`01-prerequisites.md`](01-prerequisites.md).

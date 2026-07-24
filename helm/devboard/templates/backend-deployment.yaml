@@ -37,5 +37,11 @@ spec:
               port: {{ .Values.backend.port }}
             initialDelaySeconds: 15
             periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}

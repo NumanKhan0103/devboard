@@ -1,64 +1,30 @@
 # Step 2 — Create the EKS cluster
 
-We describe the whole cluster in one file — [`eksctl/cluster.yaml`](eksctl/cluster.yaml) —
-and let eksctl build it. No console clicking, no Terraform.
-
-## 2.1 What's in the cluster file (plain English)
-
-- **Name** `devboard`, **region** `us-west-2`.
-- **OIDC enabled** — required so add-ons can get their own IAM permissions.
-- **2 × t3.medium** worker nodes (can scale to 3).
-- **Add-ons**: `vpc-cni`, `coredns`, `kube-proxy`, and **`aws-ebs-csi-driver`**.
-  That last one is important: it lets our Postgres StatefulSet request a real
-  **EBS disk** on the fly through the default `gp2` StorageClass.
-
-## 2.2 Create it
+The whole cluster is defined in [eksctl/cluster.yaml](eksctl/cluster.yaml):
+`us-west-2`, 3 × t3.medium nodes, OIDC, and add-ons (incl. `aws-ebs-csi-driver`
+for Postgres storage and `metrics-server` for the HPA).
 
 ```bash
-eksctl create cluster -f gitops/eksctl/cluster.yaml
+eksctl create cluster -f gitops/eksctl/cluster.yaml     # ~15-20 min
 ```
 
-⏳ This takes **~15–20 minutes** (it builds a VPC, the control plane, nodes, and
-IAM roles). Grab a coffee. When it finishes, eksctl automatically points your
-`kubectl` at the new cluster.
-
-## 2.3 Verify
+eksctl points `kubectl` at the new cluster automatically. Verify:
 
 ```bash
-# Two nodes, both Ready
-kubectl get nodes
-
-# The gp2 StorageClass exists (this is what Postgres will use)
-kubectl get storageclass
-
-# The EBS CSI driver is running
-kubectl -n kube-system get pods | grep ebs-csi
+kubectl get nodes                 # 3 Ready
+kubectl get storageclass          # gp2 present
+kubectl -n kube-system get pods | grep -E 'ebs-csi|metrics-server'
 ```
 
-You should see 2 `Ready` nodes, a `gp2` StorageClass, and a few `ebs-csi-*`
-pods `Running`.
+## Make gp2 the default StorageClass
 
-## 2.4 Make `gp2` the default StorageClass ⚠️
-
-On current EKS, the `gp2` StorageClass is **not** marked as the cluster default.
-Our Postgres claim doesn't name a StorageClass (it relies on the default), so
-without this step the claim sits `Pending` forever. Mark `gp2` as default:
+EKS does **not** mark `gp2` as default, and Postgres' PVC relies on a default —
+without this it stays `Pending`.
 
 ```bash
 kubectl patch storageclass gp2 \
   -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-
-# confirm it now shows "gp2 (default)"
-kubectl get storageclass
+kubectl get storageclass          # now shows "gp2 (default)"
 ```
 
-> **Why we care about EBS here:** Postgres runs as a StatefulSet with a
-> PersistentVolumeClaim. Without a default StorageClass the claim can't be
-> provisioned and stays `Pending`; without the EBS CSI driver there'd be nothing
-> to fulfil it either. With both in place, the disk is created automatically.
-
----
-
-✅ `kubectl get nodes` shows 2 Ready nodes; `kubectl get storageclass` shows
-`gp2 (default)`.
-Next: [`03-gateway-api.md`](03-gateway-api.md)
+Next: [03-gateway-api.md](03-gateway-api.md)

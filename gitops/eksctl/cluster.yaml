@@ -41,3 +41,5 @@ addons:
   - name: aws-ebs-csi-driver
     wellKnownPolicies:
       ebsCSIController: true
+  # Powers the frontend HorizontalPodAutoscaler (provides CPU metrics).
+  - name: metrics-server
