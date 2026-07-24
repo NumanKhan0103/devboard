@@ -35,10 +35,23 @@ message carries `[skip ci]`. Three independent safety nets.
 | Kind | Name | Value |
 |------|------|-------|
 | Variable | `DOCKERHUB_USERNAME` | **`trainwithshubham`** (must match the image owner in the manifests) |
-| Secret | `DOCKERHUB_TOKEN` | Docker Hub access token with push rights |
-| Secret | `SONAR_TOKEN`, `SONAR_HOST_URL` | your SonarQube server |
+| Secret | `DOCKERHUB_TOKEN` | Docker Hub access token with **Read & Write** |
+| Secret | `SONAR_TOKEN` | a SonarCloud token |
+| Secret | `SONAR_HOST_URL` | `https://sonarcloud.io` |
 
 `GITHUB_TOKEN` is built in. No `EC2_HOST` and no self-hosted runner anymore.
+
+### SonarCloud setup (one-time)
+
+1. Sign in at https://sonarcloud.io with GitHub, create an **organization**, and
+   **import** this repo (creates the project).
+2. Copy the **organization key** and **project key** into
+   `sonar-project.properties` (`sonar.organization`, `sonar.projectKey`).
+3. Generate a token (My Account → Security) and set the secrets:
+   ```bash
+   gh secret set SONAR_TOKEN --body '<sonarcloud-token>'
+   gh secret set SONAR_HOST_URL --body 'https://sonarcloud.io'
+   ```
 
 ## See it work
 

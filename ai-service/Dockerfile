@@ -6,6 +6,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# hadolint ignore=DL3008  (curl/ca-certificates from the base distro; no pin needed)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
