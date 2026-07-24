@@ -1,0 +1,33 @@
+# ArgoCD Application — deploys DevBoard WITH Helm, from the chart in
+# helm/devboard. ArgoCD renders the chart itself (no Tiller, no `helm install`)
+# and syncs the result. Deployed into its own namespace so it can run alongside
+# the raw version for comparison.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devboard-helm
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/LondheShubham153/devboard.git
+    targetRevision: gitops
+    path: helm/devboard
+    helm:
+      # Override any values.yaml defaults here. Example:
+      # valuesObject:
+      #   frontend:
+      #     replicas: 2
+      releaseName: devboard
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devboard-helm
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
