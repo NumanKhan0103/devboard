@@ -31,6 +31,7 @@ The frontend proxies `/api` to the backend internally, so the Gateway only point
 | 7 | [07-deploy-with-helm.md](07-deploy-with-helm.md) | Deploy from the chart |
 | 8 | [08-cleanup.md](08-cleanup.md) | Tear it all down |
 | 9 | [09-ai-feature.md](09-ai-feature.md) | Add the AI Assistant |
+| 10 | [10-cicd.md](10-cicd.md) | CI/CD pipeline (GitHub Actions → ArgoCD) |
 
 ## Cost
 

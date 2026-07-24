@@ -1,6 +1,6 @@
 """Trivial tests that need no model or backend — enough for CI to do real work."""
 
-from app.main import app, _format_tasks_for_prompt
+from app.main import _format_tasks_for_prompt, app
 
 
 def test_health():

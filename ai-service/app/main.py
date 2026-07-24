@@ -17,10 +17,10 @@ import logging
 import os
 
 import httpx
-from flask import Flask, request, jsonify, Response, stream_with_context
-from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST, CollectorRegistry
+from flask import Flask, Response, jsonify, request, stream_with_context
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, generate_latest
 
-from .model import stream_chat, check_model_runner, MODEL_NAME
+from .model import MODEL_NAME, check_model_runner, stream_chat
 
 logging.basicConfig(
     level=logging.INFO,
