@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: devboard-backend
-        image: trainwithshubham/devboard-backend:sha-1875552
+        image: trainwithshubham/devboard-backend:sha-b14d97f
         ports:
           - containerPort: 8080
         env:

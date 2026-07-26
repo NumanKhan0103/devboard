@@ -42,7 +42,7 @@ postgres:
 backend:
   image:
     repository: trainwithshubham/devboard-backend
-    tag: sha-1875552
+    tag: sha-b14d97f
     pullPolicy: IfNotPresent
   replicas: 1
   serviceName: backend
@@ -62,7 +62,7 @@ frontend:
   image:
     repository: trainwithshubham/devboard-frontend
     # ":ai" is the rebuilt image that includes the AI Assistant page.
-    tag: sha-1875552
+    tag: sha-b14d97f
     pullPolicy: IfNotPresent
   replicas: 1
   containerPort: 4173
@@ -91,7 +91,7 @@ ai:
   enabled: true
   image:
     repository: trainwithshubham/devboard-ai-service
-    tag: sha-1875552
+    tag: sha-b14d97f
     pullPolicy: IfNotPresent
   replicas: 1
   serviceName: ai-service
