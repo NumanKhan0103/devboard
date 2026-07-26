@@ -28,8 +28,8 @@ kubectl get gatewayclass envoy        # ACCEPTED=True
 ## Get the Load Balancer URL from AWS
 
 ```bash
-kubectl get all -n envoy-gateway-system
+kubectl get svc -n envoy-gateway-system
 ```
-This will give you all the resources from the envoy-gateway-system and the service LoadBalancer will have the AWS NLB URL
+This will give you the services from the envoy-gateway-system and the service LoadBalancer will have the AWS NLB URL
 
 Next: [04-argocd.md](04-argocd.md)
