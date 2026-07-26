@@ -65,7 +65,6 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: data
-        namespace: devboard
       spec:
         accessModes:
           - ReadWriteOnce
