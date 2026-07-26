@@ -62,4 +62,16 @@ jobs:
           fi
           git add -A
           git commit -m "ci: deploy ${TAG} [skip ci]"
-          git push origin HEAD:gitops
+          # The branch may have moved since checkout (concurrent runs, re-runs of
+          # an older SHA). Rebase onto the current tip and retry before giving up.
+          for attempt in 1 2 3; do
+            if git push origin HEAD:gitops; then
+              echo "Pushed on attempt ${attempt}."
+              exit 0
+            fi
+            echo "Push rejected (attempt ${attempt}); rebasing onto origin/gitops..."
+            git fetch origin gitops
+            git rebase origin/gitops
+          done
+          echo "Failed to push after 3 attempts." >&2
+          exit 1
