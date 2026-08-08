@@ -89,8 +89,20 @@ def stream_chat(messages: list[dict]) -> Iterable[str]:
                 except Exception:
                     snippet = "<could not read body>"
                 log.error("upstream model error %s: %s", r.status_code, snippet)
-                yield f"[model-error status={r.status_code}]"
-                return
+                # Raise, don't yield.
+                #
+                # This used to yield the string "[model-error status=404]" as
+                # ordinary stream text, with HTTP 200 — so a dead model server
+                # was indistinguishable from a bad answer. Nothing could tell
+                # them apart: not the user, not the logs, not the metrics.
+                #
+                # Raising hands control to _sse()'s except block, which emits a
+                # real `data: {"error": ...}` frame (already rendered by
+                # useAIStream.js), logs a traceback, and — once tracing is on —
+                # marks the span ERROR so it shows up in the RED dashboard.
+                raise RuntimeError(
+                    f"model server returned HTTP {r.status_code}: {snippet}"
+                )
             for raw in r.iter_lines():
                 if not raw:
                     continue

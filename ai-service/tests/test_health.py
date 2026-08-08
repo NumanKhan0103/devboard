@@ -1,6 +1,40 @@
 """Trivial tests that need no model or backend — enough for CI to do real work."""
 
-from app.main import _format_tasks_for_prompt, app
+from app import main as ai_main
+from app.main import TaskFetchError, _format_tasks_for_prompt, app
+
+
+def test_index_is_not_a_404():
+    """A bare /api/ai rewrites to / at the Gateway. It used to 404, which reads
+    as "the service is down" rather than "you missed the path"."""
+    client = app.test_client()
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert resp.get_json()["service"] == "ai-service"
+
+
+def test_missing_task_context_is_a_503_not_a_confident_lie(monkeypatch):
+    """Fail closed.
+
+    This used to return 200 and stream a summary of "(no tasks)" — the model
+    inventing a project it had been told nothing about. A wrong answer that
+    looks right is worse than an error, so an unreachable backend must surface
+    as a real status code. It can be a real one here precisely because no
+    streaming has started yet.
+    """
+    def boom(_project_id):
+        raise TaskFetchError("backend unreachable: simulated")
+
+    monkeypatch.setattr(ai_main, "_fetch_tasks", boom)
+    client = app.test_client()
+
+    for path, payload in (
+        ("/summarise", {"project_id": 1}),
+        ("/ask", {"project_id": 1, "question": "what is blocked?"}),
+    ):
+        resp = client.post(path, json=payload)
+        assert resp.status_code == 503, path
+        assert "unreachable" in resp.get_json()["error"]
 
 
 def test_health():

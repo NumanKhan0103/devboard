@@ -42,17 +42,32 @@ ai_requests_total = Counter(
 )
 
 
+class TaskFetchError(RuntimeError):
+    """The backend could not give us task context."""
+
+
 def _fetch_tasks(project_id: str) -> list[dict]:
+    """Fetch task context, or raise.
+
+    This used to fail OPEN: on any error it returned [], the prompt below
+    rendered "(no tasks)", and the model cheerfully invented a summary of a
+    project it had been told nothing about. Confidently wrong output is worse
+    than an error — it is indistinguishable from a working system.
+
+    Fail closed instead. The caller turns this into a real 503, which is
+    possible precisely because we have not started streaming yet.
+    """
     url = f"{TASK_SERVICE_URL}/tasks?project_id={project_id}"
     try:
-        with httpx.Client(timeout=10.0) as client:
+        # 5s, not 10. This is a same-namespace call to a Go service that
+        # answers a single indexed SELECT; if it takes five seconds it is
+        # already broken, and waiting longer just delays the diagnosis.
+        with httpx.Client(timeout=5.0) as client:
             r = client.get(url)
     except Exception as err:  # noqa: BLE001
-        log.warning("could not reach backend for tasks: %s", err)
-        return []
+        raise TaskFetchError(f"backend unreachable: {err}") from err
     if r.status_code != 200:
-        log.warning("backend returned %s for tasks", r.status_code)
-        return []
+        raise TaskFetchError(f"backend returned HTTP {r.status_code}")
     return (r.json() or {}).get("tasks", [])
 
 
@@ -94,6 +109,20 @@ def _sse(generator):
 
 # --- routes ---------------------------------------------------------------
 
+@app.get("/")
+def index():
+    """Reachable at /api/ai — the Gateway rewrites the prefix away.
+
+    Without this, a bare /api/ai rewrites to / and 404s, which reads as
+    "the AI service is down" rather than "you missed the path".
+    """
+    return jsonify({
+        "service": "ai-service",
+        "model": MODEL_NAME,
+        "endpoints": ["/health", "/model/check", "POST /summarise", "POST /ask"],
+    })
+
+
 @app.get("/health")
 def health():
     return jsonify({"status": "ok", "service": "ai-service", "model": MODEL_NAME})
@@ -117,7 +146,16 @@ def summarise():
         ai_requests_total.labels("summarise", "400").inc()
         return jsonify({"error": "project_id is required"}), 400
 
-    tasks = _fetch_tasks(project_id)
+    # A REAL status code, because nothing has been streamed yet. Compare with
+    # model.py, where an upstream failure happens mid-stream and the status
+    # line was already flushed as 200 — there the error has to travel in-band.
+    try:
+        tasks = _fetch_tasks(project_id)
+    except TaskFetchError as err:
+        log.error("task context unavailable: %s", err)
+        ai_requests_total.labels("summarise", "503").inc()
+        return jsonify({"error": str(err)}), 503
+
     prompt = (
         "You are an engineering manager assistant. Summarise the current state of "
         "this project in 4-6 sentences. Call out blockers, in-progress work, and "
@@ -141,7 +179,13 @@ def ask():
         ai_requests_total.labels("ask", "400").inc()
         return jsonify({"error": "project_id and question are required"}), 400
 
-    tasks = _fetch_tasks(project_id)
+    try:
+        tasks = _fetch_tasks(project_id)
+    except TaskFetchError as err:
+        log.error("task context unavailable: %s", err)
+        ai_requests_total.labels("ask", "503").inc()
+        return jsonify({"error": str(err)}), 503
+
     prompt = (
         "You are answering questions about an engineering project. Use only "
         "the task list below as context. If the answer isn't in the tasks, "

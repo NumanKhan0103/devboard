@@ -22,23 +22,63 @@ spec:
   parentRefs:
     - name: devboard-gateway
   rules:
-    # /api/ai/* → ai-service. A longer prefix than "/", so it wins for AI calls.
-    # URLRewrite strips "/api/ai" so the service sees /summarise, /ask, etc.
+    # Expose exactly the endpoints you mean to expose.
+    #
+    # This used to be one `PathPrefix: /api/ai` rule. A prefix is a wildcard,
+    # so publishing /ask also published /metrics — the Prometheus endpoint was
+    # reachable from the internet at /api/ai/metrics as a side effect. Three
+    # Exact matches cost two extra rules and zero surprises; anything else
+    # falls through to the "/" rule and gets the frontend's 404, which is the
+    # correct answer.
     - matches:
         - path:
-            type: PathPrefix
-            value: /api/ai
+            type: Exact
+            value: /api/ai/summarise
       filters:
         - type: URLRewrite
           urlRewrite:
             path:
-              type: ReplacePrefixMatch
-              replacePrefixMatch: /
+              type: ReplaceFullPath
+              replaceFullPath: /summarise
       # CPU inference streams slowly — raise the default (~15s) route timeout so
       # Envoy doesn't cut off the SSE response.
       timeouts:
         request: "300s"
         backendRequest: "300s"
+      backendRefs:
+        - name: ai-service
+          port: 3005
+
+    - matches:
+        - path:
+            type: Exact
+            value: /api/ai/ask
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /ask
+      timeouts:
+        request: "300s"
+        backendRequest: "300s"
+      backendRefs:
+        - name: ai-service
+          port: 3005
+
+    # No timeouts override here, deliberately. The 300s above is a property of
+    # STREAMING, not of the service — a health check that needs five minutes is
+    # not a health check.
+    - matches:
+        - path:
+            type: Exact
+            value: /api/ai/health
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /health
       backendRefs:
         - name: ai-service
           port: 3005

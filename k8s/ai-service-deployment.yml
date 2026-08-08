@@ -31,12 +31,27 @@ spec:
               value: http://ollama.ollama.svc.cluster.local:11434/v1
             - name: MODEL_NAME
               value: llama3.2:1b
+          # Readiness stays on /health, and deliberately does NOT check Ollama.
+          # There is a /model/check endpoint that would report on the model
+          # server — do not point a probe at it. If readiness tracked a
+          # dependency, an Ollama restart would pull every ai-service pod out
+          # of the Service, Envoy would answer a bodiless "503 no healthy
+          # upstream" (strictly less useful than the error frame the app
+          # returns), and Prometheus could no longer scrape /metrics — losing
+          # observability exactly when it is needed. Readiness answers "can
+          # this process serve a request?", not "will the request succeed?"
+          # Dependency health is REPORTED (see the PrometheusRule in
+          # gitops/observability/), never enforced.
           livenessProbe:
             httpGet:
               path: /health
               port: 3005
             initialDelaySeconds: 10
             periodSeconds: 15
+            # Don't kill a pod over one slow probe: under load every thread can
+            # be busy streaming, and /health queues behind them.
+            timeoutSeconds: 5
+            failureThreshold: 4
           readinessProbe:
             httpGet:
               path: /health

@@ -29,22 +29,41 @@ spec:
   {{- end }}
   rules:
     {{- if .Values.ai.enabled }}
-    # /api/ai/* → ai-service (longer prefix wins). Strip the /api/ai prefix so
-    # the service sees /summarise, /ask, etc.
+    # Exact matches, not one PathPrefix. A prefix is a wildcard: publishing
+    # /ask also published /metrics to the internet at /api/ai/metrics. Anything
+    # not listed here falls through to the "/" rule and gets a 404, which is
+    # the correct answer.
+    {{- range $ep := list "summarise" "ask" }}
     - matches:
         - path:
-            type: PathPrefix
-            value: /api/ai
+            type: Exact
+            value: /api/ai/{{ $ep }}
       filters:
         - type: URLRewrite
           urlRewrite:
             path:
-              type: ReplacePrefixMatch
-              replacePrefixMatch: /
+              type: ReplaceFullPath
+              replaceFullPath: /{{ $ep }}
       # CPU inference streams slowly — raise the default (~15s) route timeout.
       timeouts:
         request: "300s"
         backendRequest: "300s"
+      backendRefs:
+        - name: {{ $.Values.ai.serviceName }}
+          port: {{ $.Values.ai.port }}
+    {{- end }}
+    # No timeouts override: the 300s above is a property of STREAMING, not of
+    # the service. A health check needing five minutes is not a health check.
+    - matches:
+        - path:
+            type: Exact
+            value: /api/ai/health
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: /health
       backendRefs:
         - name: {{ .Values.ai.serviceName }}
           port: {{ .Values.ai.port }}

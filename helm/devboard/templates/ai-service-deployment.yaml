@@ -32,12 +32,19 @@ spec:
               value: {{ .Values.ai.ollamaUrl | quote }}
             - name: MODEL_NAME
               value: {{ .Values.ai.modelName | quote }}
+          # Readiness stays on /health and deliberately does NOT check Ollama —
+          # see the long note in k8s/ai-service-deployment.yml. Coupling
+          # readiness to a dependency turns one outage into a cascading one.
           livenessProbe:
             httpGet:
               path: /health
               port: {{ .Values.ai.port }}
             initialDelaySeconds: 10
             periodSeconds: 15
+            # Don't kill a pod over one slow probe while its threads are busy
+            # streaming.
+            timeoutSeconds: 5
+            failureThreshold: 4
           readinessProbe:
             httpGet:
               path: /health
