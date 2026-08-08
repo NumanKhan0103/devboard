@@ -1,4 +1,4 @@
-# Step 4 — Install ArgoCD
+# 05 — ArgoCD
 
 ArgoCD is the GitOps engine: point it at a repo + path and it keeps the cluster
 matching Git.
@@ -28,4 +28,4 @@ Open http://localhost:8080 → user `admin` + that password.
 We register apps by `kubectl apply`-ing `Application` manifests (that's GitOps),
 not by clicking in the UI. That's the next step.
 
-Next: [05-deploy-without-helm.md](05-deploy-without-helm.md)
+Next: [06-secrets-with-secrets-manager.md](06-secrets-with-secrets-manager.md)

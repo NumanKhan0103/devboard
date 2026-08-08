@@ -1,4 +1,4 @@
-# Step 7 — Deploy with Helm
+# 09 — Deploy with Helm
 
 ArgoCD renders the chart itself and syncs it into a **separate** namespace
 (`devboard-helm`) so it runs alongside the raw version for comparison.
@@ -29,4 +29,4 @@ Same app, same GitOps flow — Helm just adds templating and reuse.
 > Running both = two NLBs. To keep only one, delete the other app, e.g.
 > `kubectl delete -f gitops/argocd/devboard-raw.yaml`.
 
-Next: [08-cleanup.md](08-cleanup.md)
+Next: [10-ai-feature.md](10-ai-feature.md)

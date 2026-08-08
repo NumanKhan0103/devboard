@@ -1,4 +1,4 @@
-# Step 10 — CI/CD (pure GitOps)
+# 14 — CI/CD (pure GitOps)
 
 GitHub is the single source of truth. A code change runs the pipeline, which
 builds images and **commits the new image tag into the manifests**. ArgoCD sees

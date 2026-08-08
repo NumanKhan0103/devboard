@@ -1,4 +1,4 @@
-# Step 3 — Gateway API (Envoy Gateway)
+# 04 — Gateway API (Envoy Gateway)
 
 The Gateway API is the modern replacement for Ingress:
 - **GatewayClass** — which controller handles gateways (set once)
@@ -32,4 +32,4 @@ kubectl get svc -n envoy-gateway-system
 ```
 This will give you the services from the envoy-gateway-system and the service LoadBalancer will have the AWS NLB URL
 
-Next: [04-argocd.md](04-argocd.md)
+Next: [05-argocd.md](05-argocd.md)

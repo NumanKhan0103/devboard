@@ -18,10 +18,12 @@ browser  →  frontend (React)  →  backend (Go API)  →  database (Postgres)
 There's no login and no AI here on purpose. The whole point is to *see how the
 pieces connect*.
 
-> **Deploying to Kubernetes?** This branch also ships a full GitOps guide — EKS
-> (via `eksctl`) + Argo CD + Helm + Gateway API, with a GitHub Actions pipeline
-> that builds SHA-tagged images and commits them back for Argo CD to sync. Start
-> at [`gitops/README.md`](gitops/README.md).
+> **Deploying to Kubernetes?** This branch ships the full mega-project guide —
+> EKS built with **Terraform**, Argo CD + Helm + Gateway API, credentials in
+> **AWS Secrets Manager**, **OpenTelemetry** tracing across all three tiers, and
+> a GitHub Actions pipeline that builds SHA-tagged images and commits them back
+> for Argo CD to sync. Fifteen chapters, starting at
+> [`gitops/README.md`](gitops/README.md).
 
 ---
 
@@ -246,7 +248,7 @@ Pushing to the `gitops` branch runs the pipeline in
    branch) then syncs the change to the cluster — **CI never touches the
    cluster directly**.
 
-See [`gitops/10-cicd.md`](gitops/10-cicd.md) for the full walk-through. The
+See [`gitops/14-cicd.md`](gitops/14-cicd.md) for the full walk-through. The
 steps below configure the secrets the pipeline needs.
 
 ### How to Install and Set Up SonarQube on EC2

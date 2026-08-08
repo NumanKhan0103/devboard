@@ -1,4 +1,4 @@
-# Step 9 — AI Assistant (self-hosted, free)
+# 10 — AI Assistant (self-hosted, free)
 
 Adds an AI Assistant that summarises a project and answers questions about its
 tasks, streaming the reply token-by-token. It runs entirely in-cluster — no API
@@ -22,11 +22,18 @@ request also waits for Ollama to pull ~1.3 GB. See "Make it better" below.
 
 ## Deploy
 
-The cluster already has 3 nodes (headroom for Ollama). Deploy the shared Ollama,
-then let ArgoCD pick up the ai-service (it's part of both stacks):
+**Ollama is already running.** You applied `gitops/argocd/platform.yaml` back in
+chapter 06, and Ollama is one of its children — so ArgoCD deployed it for you.
+
+That was not always true. It used to be a manual `kubectl apply -f
+gitops/argocd/ollama.yaml` in this chapter, and skipping that one line produced
+a symptom *identical* to the missing `storageClassName` on its PVC: an
+ai-service that reports perfectly healthy while every request fails. Two
+completely different causes, one indistinguishable failure. Making it part of
+the app-of-apps removed one of them.
 
 ```bash
-kubectl apply -f gitops/argocd/ollama.yaml
+kubectl -n ollama get pvc ollama-models                         # MUST be Bound
 kubectl -n ollama rollout status deploy/ollama --timeout=600s   # first pull takes a few min
 kubectl -n ollama exec deploy/ollama -- ollama list             # llama3.2:1b
 
@@ -61,4 +68,4 @@ Health: `curl http://$ADDR/api/ai/health` → `{"status":"ok","service":"ai-serv
   key (e.g. Groq: `https://api.groq.com/openai/v1`, `llama-3.3-70b-versatile`).
   Put the key in a Secret — never commit it (this repo is public).
 
-Done. Clean up with [08-cleanup.md](08-cleanup.md).
+Next: [11-observability.md](11-observability.md)
