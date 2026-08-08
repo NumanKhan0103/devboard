@@ -8,6 +8,11 @@
 # you, and "helm install" without reading values.yaml is how a teaching cluster
 # ends up unschedulable.
 
+# Same reason as tempo-values.yaml: under ArgoCD the Helm release name is the
+# Application name, so without this the Service is "observability-loki" and
+# every loki.observability.svc.cluster.local reference dies with "no such host".
+fullnameOverride: loki
+
 deploymentMode: SingleBinary
 
 loki:

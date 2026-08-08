@@ -6,6 +6,14 @@
 # grafana charts moved to grafana-community.github.io/helm-charts. The old repo
 # still serves ancient versions, which is a confusing way to fail.
 
+# Without this the Service is named after the Helm RELEASE, which under ArgoCD
+# is the Application name — so you get "observability-tempo", not "tempo", and
+# every reference to tempo.observability.svc.cluster.local fails DNS. The
+# Collector's symptom for that is a cryptic
+#   rpc error: code = Unavailable desc = no children to pick from
+# which says nothing about DNS at all. Pin the name instead of guessing it.
+fullnameOverride: tempo
+
 tempo:
   retention: 48h
 

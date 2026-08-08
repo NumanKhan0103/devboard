@@ -80,7 +80,10 @@ datasources:
       - name: Tempo
         type: tempo
         uid: tempo
-        url: http://tempo.observability.svc.cluster.local:3100
+        # Port 3200, not 3100. Tempo's HTTP API is on 3200; 3100 is Loki's.
+        # Getting this wrong gives you a datasource that saves fine, tests
+        # green-ish, and returns nothing.
+        url: http://tempo.observability.svc.cluster.local:3200
         access: proxy
         jsonData:
           # TRACE -> LOGS. Given a span, jump to the logs from the same pod in
