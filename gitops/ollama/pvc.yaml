@@ -18,6 +18,6 @@ spec:
   storageClassName: gp3
   resources:
     requests:
-      # 10Gi, not 5: llama3.2:1b is ~1.3 GB, but 09-ai-feature.md invites you to
+      # 10Gi, not 5: llama3.2:1b is ~1.3 GB, but 10-ai-feature.md invites you to
       # try llama3.2:3b or gemma2:2b, and a second model fills a 5Gi volume.
       storage: 10Gi

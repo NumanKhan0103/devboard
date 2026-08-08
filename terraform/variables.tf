@@ -64,7 +64,7 @@ variable "intern_iam_principal_arn" {
 }
 
 variable "enable_argocd" {
-  description = "Install ArgoCD via Helm from Terraform. Set false if you would rather install it by hand (the old gitops/04-argocd.md flow)."
+  description = "Install ArgoCD via Helm from Terraform. Set false if you would rather install it by hand (the flow in gitops/05-argocd.md)."
   type        = bool
   default     = true
 }
