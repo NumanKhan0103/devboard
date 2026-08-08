@@ -1,0 +1,58 @@
+# Tempo — trace storage.
+#
+# Chart: grafana-community/tempo 2.2.3  (single binary mode)
+#
+# NOTE the repo: grafana.github.io/helm-charts is FROZEN. The tempo, loki and
+# grafana charts moved to grafana-community.github.io/helm-charts. The old repo
+# still serves ancient versions, which is a confusing way to fail.
+
+tempo:
+  retention: 48h
+
+  storage:
+    trace:
+      # Local disk on a PVC, not S3.
+      #
+      # S3 would need a bucket, an IAM role, and lifecycle policies — three AWS
+      # concepts that have nothing to do with observability, plus real money and
+      # an orphaned bucket at teardown (gitops/15-cleanup.md already fights
+      # orphaned EBS volumes and NLBs). 48h of local traces is honest for a
+      # teaching cluster.
+      #
+      # In production you would flip this to:
+      #   backend: s3
+      #   s3: { bucket: ..., endpoint: s3.us-west-2.amazonaws.com, region: ... }
+      # and give the pod an IAM role. Five lines, and then Tempo is stateless.
+      backend: local
+      wal:
+        path: /var/tempo/wal
+      local:
+        path: /var/tempo/traces
+
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+  # Generates service-graph and span metrics inside Tempo. We already do this
+  # in the Collector with the spanmetrics connector, so leave it off — running
+  # both produces two sets of the same metric with different names.
+  metricsGenerator:
+    enabled: false
+
+persistence:
+  enabled: true
+  storageClassName: gp3
+  size: 10Gi
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+serviceMonitor:
+  enabled: true

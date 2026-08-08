@@ -1,0 +1,43 @@
+# Tempo — trace storage. Wave 1: the Collector needs it before it can export.
+#
+# Two sources, which is the useful bit. Source 1 is the upstream chart straight
+# from its Helm repo; source 2 is THIS repo contributing only a values file
+# (note it has no `path`, just a `ref`). $values resolves to it. That is how
+# you keep someone else's chart and your own configuration in two different
+# places without vendoring the chart or inlining YAML inside YAML.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-tempo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+
+  sources:
+    - repoURL: https://grafana-community.github.io/helm-charts
+      chart: tempo
+      targetRevision: "2.2.3"
+      helm:
+        valueFiles:
+          - $values/gitops/observability/tempo-values.yaml
+
+    - # Change repoURL to YOUR fork.
+      repoURL: https://github.com/LondheShubham153/devboard.git
+      targetRevision: mega-project
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # Several of these charts ship CRDs larger than the 262144-byte limit on
+      # the last-applied-configuration annotation client-side apply writes.
+      - ServerSideApply=true

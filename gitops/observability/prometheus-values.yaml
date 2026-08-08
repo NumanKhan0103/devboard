@@ -1,0 +1,81 @@
+# kube-prometheus-stack — Prometheus, the Prometheus Operator, kube-state-metrics
+# and node-exporter in one chart.
+#
+# Chart: prometheus-community/kube-prometheus-stack 88.2.0
+#
+# Grafana and Alertmanager are DISABLED here and installed separately. The
+# chart can run both, but burying Grafana's datasource wiring inside a subchart
+# is the opposite of what this project is for — see grafana-values.yaml, where
+# the correlation config is one readable file.
+
+grafana:
+  enabled: false
+alertmanager:
+  enabled: false
+
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: true
+
+prometheus:
+  prometheusSpec:
+    # Two ways to receive pushed metrics, both on, so you can try each:
+    #   remote-write — universal, every Prometheus supports it
+    #   native OTLP  — Prometheus 3.x speaks OTLP directly, no translation
+    # The Collector uses remote-write (see collector-gateway-values.yaml).
+    enableRemoteWriteReceiver: true
+    enableOTLPReceiver: true
+
+    # 24h, and 30s scrapes rather than 15s. CPU is the binding constraint on
+    # this cluster, not disk: t3.large is burstable and sustains only ~0.6 vCPU
+    # per node. Halving the ingest rate is the cheapest thing you can do.
+    retention: 24h
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+
+    # By default the operator only picks up ServiceMonitors created by its own
+    # Helm release. Ours live in gitops/observability/manifests/ and are not
+    # part of this release, so without these four lines Prometheus would
+    # silently scrape nothing of ours — no error, just no data.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+      limits:
+        cpu: "1"
+        memory: 2Gi
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          # Named explicitly. This whole project exists partly because one PVC
+          # did not do that; see gitops/ollama/pvc.yaml.
+          storageClassName: gp3
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 10Gi
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100Mi
+    limits:
+      cpu: 200m
+      memory: 200Mi

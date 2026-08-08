@@ -1,0 +1,82 @@
+# Loki — log storage.
+#
+# Chart: grafana-community/loki 18.7.5  (monolithic / single-binary mode)
+#
+# This chart ships a LOT. It can deploy Loki as a dozen microservices with
+# memcached in front of each. Most of this file is turning that off — which is
+# itself the lesson: a chart's defaults are aimed at its biggest user, not at
+# you, and "helm install" without reading values.yaml is how a teaching cluster
+# ends up unschedulable.
+
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false          # no multi-tenancy on a learning cluster
+
+  commonConfig:
+    replication_factor: 1
+
+  storage:
+    type: filesystem
+
+  schemaConfig:
+    configs:
+      - from: "2024-04-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+
+  limits_config:
+    retention_period: 72h
+    # REQUIRED for trace correlation. OTLP log records carry trace_id and
+    # span_id; structured metadata is what lets Loki store them as real fields
+    # instead of forcing Grafana to regex them back out of the message text.
+    allow_structured_metadata: true
+
+  # Accept OTLP directly from the Collector at /otlp. No Promtail in this
+  # design — the Collector's file_log receiver replaced it.
+  server:
+    http_listen_port: 3100
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    storageClass: gp3
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+# Scale the microservice deployment modes to zero — SingleBinary replaces them.
+write:
+  replicas: 0
+read:
+  replicas: 0
+backend:
+  replicas: 0
+
+# chunksCache defaults to ENABLED with a multi-gigabyte memcached memory
+# request. Leaving it on is the single most common reason the Loki chart sits
+# Pending forever on a small cluster, and the event message blames memory
+# without naming the culprit.
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+
+gateway:
+  enabled: false
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
+minio:
+  enabled: false

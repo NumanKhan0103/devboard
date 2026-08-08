@@ -1,0 +1,160 @@
+# Grafana.
+#
+# Chart: grafana-community/grafana 12.10.4
+#
+# The interesting part of this file is NOT the three datasource URLs. It is the
+# jsonData blocks, which are what physically wire traces, logs and metrics to
+# each other. Without them you have three separate tools that happen to be
+# installed on the same cluster; with them you have one investigation surface.
+
+# Demo only. A real install reads this from a Secret — and now that this
+# project has External Secrets Operator, doing that is a good exercise:
+# put it in Secrets Manager and reference it with admin.existingSecret.
+adminPassword: devboard
+
+# Dashboards come from Git (see dashboards/), so there is nothing on disk worth
+# keeping. No PVC also means no orphaned EBS volume at teardown.
+persistence:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+service:
+  # ClusterIP. A LoadBalancer here is a third AWS NLB (~$17/month) exposing an
+  # admin console with a password of "devboard" to the internet. Use:
+  #   kubectl -n observability port-forward svc/grafana 3000:80
+  type: ClusterIP
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus
+        url: http://prometheus-operated.observability.svc.cluster.local:9090
+        access: proxy
+        isDefault: true
+        jsonData:
+          timeInterval: 30s
+          # METRIC -> TRACE. An exemplar is a single data point on a metric that
+          # carries the trace ID of one request that produced it. Click a spike
+          # on a latency graph and land in the exact slow request. Needs
+          # exemplar support end to end, so treat it as advanced.
+          exemplarTraceIdDestinations:
+            - name: trace_id
+              datasourceUid: tempo
+
+      - name: Loki
+        type: loki
+        uid: loki
+        url: http://loki.observability.svc.cluster.local:3100
+        access: proxy
+        jsonData:
+          # LOG -> TRACE. Grafana finds a trace ID in a log line and renders a
+          # "View trace" button beside it.
+          derivedFields:
+            # ai-service ships logs over OTLP, so trace_id arrives as real
+            # structured metadata. No regex needed — this is the payoff for
+            # structured logging.
+            - name: trace_id
+              matcherType: label
+              matcherRegex: trace_id
+              datasourceUid: tempo
+              url: "$${__value.raw}"
+            # The Go backend writes plain text to stdout, so its trace ID has
+            # to be regexed back out of "trace_id=abc123..." (see fail() in
+            # backend/main.go). Both paths work; only one of them is pleasant.
+            - name: TraceID
+              matcherType: regex
+              matcherRegex: "trace_id=(\\w+)"
+              datasourceUid: tempo
+              url: "$${__value.raw}"
+
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        url: http://tempo.observability.svc.cluster.local:3100
+        access: proxy
+        jsonData:
+          # TRACE -> LOGS. Given a span, jump to the logs from the same pod in
+          # the same time window, filtered to this trace.
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: "-2m"
+            spanEndTimeShift: "2m"
+            filterByTraceID: true
+            filterBySpanID: false
+            tags:
+              - key: k8s.namespace.name
+                value: k8s_namespace_name
+              - key: k8s.pod.name
+                value: k8s_pod_name
+
+          # TRACE -> METRICS. Given a span, show the RED metrics the
+          # spanmetrics connector derived from spans just like it.
+          tracesToMetrics:
+            datasourceUid: prometheus
+            spanStartTimeShift: "-2m"
+            spanEndTimeShift: "2m"
+            queries:
+              - name: "Request rate"
+                query: 'sum(rate(traces_span_metrics_calls_total{$$__tags}[5m]))'
+              - name: "p95 latency"
+                query: 'histogram_quantile(0.95, sum(rate(traces_span_metrics_duration_seconds_bucket{$$__tags}[5m])) by (le))'
+
+          # THE SERVICE MAP. Renders the architecture as a live graph built
+          # entirely from spanmetrics. Nobody drew it — it was discovered from
+          # traffic, which means it cannot go stale the way a wiki diagram does.
+          serviceMap:
+            datasourceUid: prometheus
+          nodeGraph:
+            enabled: true
+          search:
+            hide: false
+
+# The sidecar watches for ConfigMaps labelled grafana_dashboard=1 and drops
+# their JSON into Grafana's provisioning directory. That is how the dashboards/
+# chart in this directory gets its panels in without us templating dashboard
+# JSON inside YAML.
+sidecar:
+  dashboards:
+    enabled: true
+    label: grafana_dashboard
+    labelValue: "1"
+    searchNamespace: ALL
+    folderAnnotation: grafana_folder
+    provider:
+      foldersFromFilesStructure: true
+
+# Community dashboards fetched by grafana.com ID at startup, so we do not carry
+# thousands of lines of generic infrastructure JSON in this repo.
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: community
+        orgId: 1
+        folder: Community
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/community
+
+dashboards:
+  community:
+    node-exporter:
+      gnetId: 1860
+      revision: 37
+      datasource: Prometheus
+    kube-state:
+      gnetId: 13332
+      revision: 12
+      datasource: Prometheus
