@@ -21,10 +21,12 @@ spec:
         ports:
           - containerPort: 8080
         env:
+          # One Secret, synced from AWS Secrets Manager by External Secrets
+          # Operator. POSTGRES_USER used to live in a separate ConfigMap.
           - name: POSTGRES_USER
             valueFrom:
-              configMapKeyRef:
-                name: devboard-configmap
+              secretKeyRef:
+                name: devboard-secrets
                 key: POSTGRES_USER
           
           - name: POSTGRES_PASSWORD

@@ -9,16 +9,36 @@
 nameOverride: ""
 fullnameOverride: ""
 # -----------------------------------------------------------------------------
+# Secrets. The DB credentials used to live right here in cleartext:
+#
+#   user: devboard
+#   password: devboard        # <- in Git, in a public repo
+#
+# They now live in AWS Secrets Manager. External Secrets Operator reads them
+# and materialises the same "devboard-secrets" Secret the templates already
+# expected, so nothing downstream changed.
+#
+# Set enabled=false on a cluster with no ESO (a laptop kind cluster, say) and
+# create the Secret by hand instead.
+# -----------------------------------------------------------------------------
+externalSecrets:
+  enabled: true
+  # Must match the secret created by terraform/secrets.tf.
+  secretKey: devboard/postgres
+  storeName: aws-secrets-manager
+  # Secrets Manager bills per API call. Seconds-long intervals make for a
+  # snappy demo and a surprising invoice if you forget to change it back —
+  # use the force-sync annotation instead (see k8s/external-secret.yml).
+  refreshInterval: 1h
+# -----------------------------------------------------------------------------
 # Postgres (in-cluster database, runs as a StatefulSet with a persistent disk)
 # -----------------------------------------------------------------------------
 postgres:
   image: postgres:16-alpine
-  # These three values are the single source of truth for the DB credentials.
-  # The backend's POSTGRES_URL is assembled from them (see templates/secret.yaml).
-  # NOTE: demo credentials only — never put real secrets in a values file in Git.
-  user: devboard
-  password: devboard
-  db: devboard
+  # No user/password/db here any more — see externalSecrets above. The username
+  # and database name are credentials-adjacent and travel with the password in
+  # one JSON secret, so that all three rotate together.
+  #
   # The headless Service name Postgres is reachable at, in-cluster.
   # Keep it "postgres" — the assembled POSTGRES_URL points here.
   serviceName: postgres

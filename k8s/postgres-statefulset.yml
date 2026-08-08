@@ -22,10 +22,14 @@ spec:
         ports:
           - containerPort: 5432
         env:
+          # All three now come from the one Secret that External Secrets
+          # Operator syncs from AWS. POSTGRES_USER used to come from a separate
+          # ConfigMap, which meant the username and the password could drift
+          # apart — rotate one, forget the other, and Postgres refuses logins.
           - name: POSTGRES_USER
             valueFrom:
-              configMapKeyRef:
-                name: devboard-configmap
+              secretKeyRef:
+                name: devboard-secrets
                 key: POSTGRES_USER
           
           - name: POSTGRES_PASSWORD
