@@ -15,19 +15,37 @@ and watch it stream.
 Now: Grafana → **Explore** → **Tempo** → Search → `service.name = ai-service` →
 newest trace.
 
+This is real output from the cluster, not an idealised diagram:
+
 ```
-envoy-gateway  POST /api/ai/ask ──────────────────────────────────── 8.42s
-  ai-service   POST /ask ─────────────────────────────────────────── 8.41s
-    ai-service GET /tasks (httpx → backend) ─ 12ms
-      backend  GET /tasks ─ 9ms
-        postgres SELECT ... FROM tasks WHERE project_id = $1 ─ 3ms
-    ai-service POST /v1/chat/completions (httpx → ollama) ────────── 8.35s
+devboard-gateway.devboard  ingress ─────────────────────────────── 2103.6ms
+  devboard-gateway.devboard  router httproute/devboard/devboard-route/rule/1 egress ── 2103.4ms
+    ai-service               POST /ask ─────────────────────────── 2101.5ms
+      ai-service               GET  (httpx → backend) ─ 5.1ms
+        backend                  GET /tasks ─ 1.8ms
+          backend                  sql.conn.reset_session ─ 0.0ms
+          backend                  sql.conn.query ─ 1.5ms
+          backend                  sql.rows ─ 0.2ms
+      ai-service               POST (httpx → ollama) ───────────────  871.2ms
 ```
 
-**"Where did the 8.4 seconds go?"** One glance answers it. Not "the API is
-slow" — *the model server took 8.35 of 8.42 seconds, and Postgres took 3
-milliseconds.* You now know exactly which component to optimise and, more
-usefully, which three to leave alone.
+**9 spans, 3 services, one root.**
+
+**"Where did the 2.1 seconds go?"** One glance answers it. Not "the API is
+slow" — *the model server took 871ms, and Postgres took 1.5.* You now know
+exactly which component to optimise and, more usefully, which three to leave
+alone.
+
+Two details worth noticing:
+
+- The Postgres spans are named `sql.conn.query` / `sql.rows`, not the SQL text.
+  That is `otelsql` reporting driver operations; to see statements you enable
+  `otelsql.WithSQLCommenter` or span attributes. Useful to know before you go
+  hunting for a query you cannot find.
+- The gateway's own span is ~2ms longer than the ai-service span it wraps.
+  That difference is Envoy's proxying overhead — and it is the *healthy*
+  version of the shape you will see in Failure 1 below, where the child ends
+  up longer than the parent.
 
 Note what produced each span: Envoy's came from a CRD field, ai-service's and
 the httpx ones came from an environment variable, and the backend and Postgres
