@@ -1,5 +1,6 @@
 # GitOps handoff: write the freshly-built image tag into the manifests and
-# commit it back to `gitops`. ArgoCD (watching that branch) then syncs.
+# commit it back to the branch that triggered us. ArgoCD (watching that branch)
+# then syncs.
 #
 # The commit touches only k8s/ + helm/, which are NOT in the pipeline's push
 # `paths:` filter, and commits made with GITHUB_TOKEN don't trigger workflows —
@@ -13,14 +14,22 @@ on:
         required: true
         type: string
 
+# Two bumps racing each other is what makes the push below fail. Serialise
+# first; retrying an unserialised push only makes the collision worse.
+concurrency:
+  group: gitops-bump-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   bump:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Checkout gitops
+      - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # `git pull --rebase` below needs real history
 
       - name: Install yq
         run: |
@@ -60,6 +69,17 @@ jobs:
             echo "Manifests already at ${TAG}; nothing to commit."
             exit 0
           fi
-          git add -A
+          # Scope the add. `git add -A` in a job that also downloads yq is how
+          # you accidentally commit a 40 MB binary.
+          git add k8s helm/devboard/values.yaml
           git commit -m "ci: deploy ${TAG} [skip ci]"
-          git push origin HEAD:gitops
+
+          # Push to whatever branch triggered us, so this keeps working on
+          # mega-project, on gitops, or on a fork's branch.
+          BRANCH="${{ github.ref_name }}"
+          for i in 1 2 3; do
+            git pull --rebase origin "$BRANCH" && git push origin "HEAD:$BRANCH" && exit 0
+            echo "Push rejected (attempt ${i}); retrying..."
+            sleep $((i * 5))
+          done
+          exit 1

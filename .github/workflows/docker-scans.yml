@@ -21,21 +21,27 @@ jobs:
               with:
                 dockerfile: ${{ matrix.folders}}/Dockerfile
               
-            - name: Docker Setup [Login]
+            # PULL credential only — this job builds and scans, it never pushes.
+            # backend/ and frontend/ build FROM dhi.io/* (Docker Hardened
+            # Images), which require auth even on the free tier.
+            - name: Docker Hardened Images [Login]
               uses: docker/login-action@v4
               with:
+                registry: dhi.io
                 username: ${{ vars.DOCKERHUB_USERNAME }}
                 password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+            # Tagged for local use only. The image never leaves this runner, so
+            # it needs no registry prefix — docker-push.yml owns publishing.
             - name: Docker Build ${{ matrix.folders}}
-              run: docker build -t ${{ vars.DOCKERHUB_USERNAME }}/devboard-${{ matrix.folders }}:latest .
+              run: docker build -t devboard-${{ matrix.folders }}:ci .
               working-directory: ${{ matrix.folders}}
 
             - name: Run Trivy vulnerability scanner
               uses: aquasecurity/trivy-action@v0.36.0
               continue-on-error: true
               with:
-                image-ref: ${{ vars.DOCKERHUB_USERNAME }}/devboard-${{ matrix.folders }}:latest
+                image-ref: devboard-${{ matrix.folders }}:ci
                 format: 'table'
                 exit-code: '1'
                 ignore-unfixed: true

@@ -8,8 +8,10 @@ spec:
   project: default
 
   source:
+    # Change repoURL to YOUR fork. ArgoCD syncs from whatever is here — if it
+    # still points upstream, your CI pushes will never reach the cluster.
     repoURL: https://github.com/LondheShubham153/devboard.git
-    targetRevision: gitops
+    targetRevision: mega-project
     path: helm/devboard
     helm:
       # Override any values.yaml defaults here. Example:
