@@ -1,6 +1,3 @@
-# ArgoCD Application — deploys DevBoard WITHOUT Helm, straight from the raw
-# manifests in k8s/. ArgoCD watches the gitops branch and keeps the cluster in
-# sync with Git.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -18,9 +15,6 @@ spec:
     server: https://kubernetes.default.svc
     namespace: devboard
 
-  # The frontend Deployment's replica count is owned by the HPA, not Git.
-  # Without this, selfHeal and the HPA fight over /spec/replicas forever
-  # (the app never settles on Synced).
   ignoreDifferences:
     - group: apps
       kind: Deployment

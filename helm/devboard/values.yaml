@@ -26,7 +26,7 @@ postgres:
     size: 1Gi
     # Empty string = use the cluster's default StorageClass.
     # On EKS with the EBS CSI driver that default is "gp2".
-    storageClassName: ""
+    storageClassName: "gp2"
   resources:
     requests:
       cpu: 50m
