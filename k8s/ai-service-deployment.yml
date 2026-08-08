@@ -31,6 +31,36 @@ spec:
               value: http://ollama.ollama.svc.cluster.local:11434/v1
             - name: MODEL_NAME
               value: llama3.2:1b
+
+            # --- OpenTelemetry -------------------------------------------
+            # These are read by `opentelemetry-instrument` (the Dockerfile
+            # CMD), not by any code we wrote. app/main.py has no OTel imports
+            # at all — the instrumentation is applied to Flask and httpx at
+            # process start, before our module loads.
+            - name: OTEL_SERVICE_NAME
+              value: ai-service
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector-gateway.observability.svc.cluster.local:4318
+            # Both DevBoard stacks run an "ai-service". Without this they are
+            # indistinguishable in Tempo.
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: deployment.environment=raw,service.namespace=devboard
+            - name: OTEL_TRACES_EXPORTER
+              value: otlp
+            - name: OTEL_METRICS_EXPORTER
+              value: otlp
+            # Ship logs over OTLP too, so each record carries trace_id and
+            # span_id as REAL fields. Loki stores them as structured metadata
+            # and Grafana links log -> trace with no regex — compare with the
+            # Go backend, which has to print trace_id= into its text logs.
+            - name: OTEL_LOGS_EXPORTER
+              value: otlp
+            - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+              value: "true"
+            - name: OTEL_PYTHON_LOG_CORRELATION
+              value: "true"
           # Readiness stays on /health, and deliberately does NOT check Ollama.
           # There is a /model/check endpoint that would report on the model
           # server — do not point a probe at it. If readiness tracked a

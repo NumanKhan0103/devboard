@@ -8,6 +8,10 @@ spec:
   selector:
     app: devboard-ai-service
   ports:
-    - protocol: TCP
+    # The port NAME matters: a ServiceMonitor's endpoints[].port matches this
+    # string, not the number. Unnamed ports are why Prometheus would silently
+    # scrape nothing here — no error, just no data.
+    - name: http
+      protocol: TCP
       port: 3005
       targetPort: 3005

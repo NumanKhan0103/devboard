@@ -32,6 +32,31 @@ spec:
               value: {{ .Values.ai.ollamaUrl | quote }}
             - name: MODEL_NAME
               value: {{ .Values.ai.modelName | quote }}
+            {{- if .Values.observability.enabled }}
+            # Read by `opentelemetry-instrument` (the Dockerfile CMD), not by
+            # any code in app/. That is what zero-code instrumentation means:
+            # the entrypoint changes, the source does not.
+            - name: OTEL_SERVICE_NAME
+              value: ai-service
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.observability.otlpHttpEndpoint | quote }}
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=helm,service.namespace={{ .Release.Namespace }}"
+            - name: OTEL_TRACES_EXPORTER
+              value: otlp
+            - name: OTEL_METRICS_EXPORTER
+              value: otlp
+            # Logs over OTLP carry trace_id as a structured field, so Loki
+            # links them to traces with no regex.
+            - name: OTEL_LOGS_EXPORTER
+              value: otlp
+            - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+              value: "true"
+            - name: OTEL_PYTHON_LOG_CORRELATION
+              value: "true"
+            {{- end }}
           # Readiness stays on /health and deliberately does NOT check Ollama —
           # see the long note in k8s/ai-service-deployment.yml. Coupling
           # readiness to a dependency turns one outage into a cascading one.

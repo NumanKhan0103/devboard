@@ -4,7 +4,7 @@ description: DevBoard — a 3-tier task tracker (React + Go + Postgres) packaged
 type: application
 
 # 'version' is the chart version — bump it whenever you change the chart.
-version: 0.1.0
+version: 0.2.0
 
 # 'appVersion' tracks the application these templates deploy. We use image tag
 # ':latest', so this is informational only.

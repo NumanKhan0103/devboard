@@ -28,14 +28,24 @@ EXPOSE 3005
 HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
     CMD curl -fsS http://localhost:3005/health || exit 1
 
-# --threads 32, not 8.
+# `opentelemetry-instrument` is THE zero-code line.
 #
-# gthread holds one worker thread for the ENTIRE duration of a response, and an
-# SSE stream from a CPU-bound model can run for minutes. With 8 threads, the
-# 9th concurrent user finds no free slot — at which point /health stops
-# answering, kubelet declares the pod dead, and every in-flight stream on it
-# dies. A classroom of twenty people all clicking "Ask" makes that certain,
-# not hypothetical. Threads are cheap here because they are almost always
-# blocked on network I/O, not burning CPU.
-CMD ["gunicorn", "--bind", "0.0.0.0:3005", "--workers", "1", "--threads", "32", \
+# It reads the OTEL_* environment variables (set in k8s/ai-service-deployment.yml
+# and the Helm chart), installs every instrumentation package it can find that
+# matches an imported library, and then execs gunicorn. Flask and httpx are
+# patched before app/main.py is ever imported — which is why that file contains
+# no OpenTelemetry code at all.
+#
+# The same three signals cost ~60 lines of explicit SDK wiring in
+# backend/tracing.go. Neither is better; chapter 12 is about the trade-off.
+#
+# --threads 32, not 8: gthread holds one worker thread for the ENTIRE duration
+# of a response, and an SSE stream from a CPU-bound model can run for minutes.
+# With 8 threads the 9th concurrent user finds no free slot — at which point
+# /health stops answering, kubelet declares the pod dead, and every in-flight
+# stream on it dies. A classroom of twenty people clicking "Ask" makes that
+# certain, not hypothetical. Threads are cheap here because they are almost
+# always blocked on network I/O rather than burning CPU.
+CMD ["opentelemetry-instrument", \
+     "gunicorn", "--bind", "0.0.0.0:3005", "--workers", "1", "--threads", "32", \
      "--timeout", "600", "--access-logfile", "-", "--error-logfile", "-", "app.main:app"]

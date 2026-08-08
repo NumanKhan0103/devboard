@@ -46,6 +46,19 @@ spec:
           
           - name: PORT
             value: "8080"
+
+          # --- OpenTelemetry ---------------------------------------------
+          # Read by the SDK wired up in backend/tracing.go. Note this is gRPC
+          # (:4317) while ai-service uses HTTP (:4318) — same data, different
+          # transport, chosen per language for reasons explained in each place.
+          - name: OTEL_SERVICE_NAME
+            value: backend
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: http://otel-collector-gateway.observability.svc.cluster.local:4317
+          - name: OTEL_EXPORTER_OTLP_INSECURE
+            value: "true"
+          - name: OTEL_RESOURCE_ATTRIBUTES
+            value: deployment.environment=raw,service.namespace=devboard
         livenessProbe:
           httpGet:
             path: /health

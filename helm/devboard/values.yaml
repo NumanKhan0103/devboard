@@ -21,6 +21,22 @@ fullnameOverride: ""
 # Set enabled=false on a cluster with no ESO (a laptop kind cluster, say) and
 # create the Secret by hand instead.
 # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# OpenTelemetry. Every service reports to the shared Collector in the
+# "observability" namespace, installed once as platform infra by
+# gitops/argocd/platform.yaml.
+#
+# Set enabled=false on a cluster without it. Both SDKs are built to fail safe:
+# they log once that the Collector is unreachable and serve traffic untraced.
+# The raw k8s/ manifests have no equivalent switch — that difference is a
+# concrete answer to "why bother with Helm?".
+# -----------------------------------------------------------------------------
+observability:
+  enabled: true
+  # gRPC for the Go backend, HTTP for the Python ai-service. Same protobuf
+  # payload; see the comments in each Deployment for why they differ.
+  otlpGrpcEndpoint: otel-collector-gateway.observability.svc.cluster.local:4317
+  otlpHttpEndpoint: http://otel-collector-gateway.observability.svc.cluster.local:4318
 externalSecrets:
   enabled: true
   # Must match the secret created by terraform/secrets.tf.

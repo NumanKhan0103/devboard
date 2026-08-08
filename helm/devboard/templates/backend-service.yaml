@@ -11,6 +11,8 @@ spec:
   selector:
     app: devboard-backend
   ports:
-    - protocol: TCP
+    # Named so a ServiceMonitor can select it.
+    - name: http
+      protocol: TCP
       port: {{ .Values.backend.port }}
       targetPort: {{ .Values.backend.port }}
