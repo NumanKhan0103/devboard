@@ -3,13 +3,19 @@
 export default {
   preview: {
     proxy: {
-      // AI calls go to the ai-service. Listed BEFORE /api (object order matters)
-      // so /api/ai/* isn't swallowed by the /api rule.
-      '/api/ai': {
-        target: 'http://ai-service:3005',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/ai/, ''),
-      },
+      // There is deliberately NO '/api/ai' rule here.
+      //
+      // In the cluster the Gateway owns those paths: k8s/httproute.yml matches
+      // /api/ai/summarise, /api/ai/ask and /api/ai/health exactly and sends
+      // them straight to ai-service, so they never reach this container.
+      //
+      // A blanket '/api/ai' prefix rule here would be a SECOND, independent
+      // route into ai-service that bypasses those Exact matches entirely —
+      // which is how /metrics stayed publicly reachable at /api/ai/metrics
+      // even after the HTTPRoute was tightened. Two doors, one lock.
+      //
+      // Anything under /api/ai that the Gateway does not recognise now falls
+      // through to the /api rule below and 404s at the Go backend.
       '/api': {
         target: 'http://backend:8080',
         changeOrigin: true,

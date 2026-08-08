@@ -26,10 +26,17 @@ spec:
     #
     # This used to be one `PathPrefix: /api/ai` rule. A prefix is a wildcard,
     # so publishing /ask also published /metrics — the Prometheus endpoint was
-    # reachable from the internet at /api/ai/metrics as a side effect. Three
-    # Exact matches cost two extra rules and zero surprises; anything else
-    # falls through to the "/" rule and gets the frontend's 404, which is the
-    # correct answer.
+    # reachable from the internet at /api/ai/metrics as a side effect.
+    #
+    # Tightening THIS file was necessary but not sufficient, and the reason is
+    # worth remembering: the frontend container ran its own vite proxy with a
+    # blanket /api/ai rule, so anything the Gateway declined to match fell
+    # through to "/" and the frontend forwarded it to ai-service anyway. Two
+    # independent doors; locking one changed nothing. Verified by curling the
+    # frontend pod directly with the Gateway bypassed entirely.
+    #
+    # The second door is closed in frontend/vite.preview.config.js. When you
+    # restrict a route, go looking for the other paths to the same service.
     - matches:
         - path:
             type: Exact

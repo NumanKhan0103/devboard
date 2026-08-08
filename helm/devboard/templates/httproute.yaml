@@ -30,9 +30,13 @@ spec:
   rules:
     {{- if .Values.ai.enabled }}
     # Exact matches, not one PathPrefix. A prefix is a wildcard: publishing
-    # /ask also published /metrics to the internet at /api/ai/metrics. Anything
-    # not listed here falls through to the "/" rule and gets a 404, which is
-    # the correct answer.
+    # /ask also published /metrics to the internet at /api/ai/metrics.
+    #
+    # Tightening this file alone did NOT close that hole — the frontend
+    # container ran its own vite proxy with a blanket /api/ai rule, so whatever
+    # the Gateway declined fell through to "/" and the frontend forwarded it to
+    # ai-service regardless. See frontend/vite.preview.config.js for the other
+    # half of the fix.
     {{- range $ep := list "summarise" "ask" }}
     - matches:
         - path:

@@ -26,7 +26,10 @@ __pycache__/
 terraform/**/.terraform/
 *.tfstate
 *.tfstate.*
+# Both forms: '*.tfplan' does NOT match a file named plainly 'tfplan',
+# which is what `terraform plan -out=tfplan` produces by default.
 *.tfplan
+tfplan
 .terraform.tfstate.lock.info
 crash.log
 crash.*.log
