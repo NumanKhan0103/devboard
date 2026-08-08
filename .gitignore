@@ -21,3 +21,21 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+
+# --- Terraform ---------------------------------------------------------------
+terraform/**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+
+# Personal to you: contains YOUR globally-unique state bucket name.
+terraform/backend.hcl
+*.auto.tfvars
+
+# NOT ignored, on purpose — half the .gitignore templates online get this wrong:
+#   .terraform.lock.hcl   provider checksums. Committing it is the whole point;
+#                         it is Terraform's package-lock.json.
+#   terraform.tfvars      teaching defaults with no secrets in them.

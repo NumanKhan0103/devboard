@@ -1,0 +1,105 @@
+# Static analysis for terraform/. Deliberately a SEPARATE workflow from
+# devsecops.yml, for two reasons:
+#
+#   1. Adding terraform/** to the DevSecOps paths filter would rebuild all
+#      three container images on every HCL edit, then produce a no-op
+#      gitops-bump commit. Infrastructure code and application code have
+#      different blast radii and deserve different pipelines.
+#
+#   2. This workflow gets NO AWS credentials and no id-token. `terraform plan`
+#      would need read access to the state file — which holds the cluster CA
+#      data and everything else Terraform has ever touched. Linting needs none
+#      of that, so it gets none of it.
+name: Terraform Checks
+
+on:
+  push:
+    branches: [mega-project]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-ci.yml'
+  pull_request:
+    paths:
+      - 'terraform/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fmt-validate:
+    name: Format and validate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: ['terraform', 'terraform/bootstrap']
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff
+        working-directory: ${{ matrix.dir }}
+
+      # -backend=false skips talking to S3. init still downloads providers and
+      # modules, because validate cannot check a module it has not fetched.
+      - name: terraform init
+        run: terraform init -backend=false -input=false
+        working-directory: ${{ matrix.dir }}
+
+      - name: terraform validate
+        run: terraform validate
+        working-directory: ${{ matrix.dir }}
+
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - run: tflint --init
+        working-directory: terraform
+
+      - run: tflint --recursive --format compact
+        working-directory: terraform
+
+  checkov:
+    name: Checkov
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # soft_fail while the baseline settles. Turning it off is the exercise:
+      # go through the findings, fix what matters, and add an inline
+      # `#checkov:skip=RULE: reason` for each one you deliberately accept.
+      # A written justification beats a blanket --soft-fail.
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform
+          framework: terraform
+          soft_fail: true
+          output_format: cli
+          download_external_modules: false
+
+  trivy-config:
+    name: Trivy (IaC misconfiguration)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: aquasecurity/trivy-action@v0.36.0
+        continue-on-error: true
+        with:
+          scan-type: config
+          scan-ref: terraform
+          format: table
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'

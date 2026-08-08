@@ -68,7 +68,10 @@ spec:
       spec:
         accessModes:
           - ReadWriteOnce
-        storageClassName: gp2
+        # Named explicitly, not left to the cluster default. terraform/storage.tf
+        # creates this class and marks it default; naming it anyway means a
+        # missing class fails loudly instead of leaving the PVC Pending forever.
+        storageClassName: gp3
         resources:
           requests:
             storage: 1Gi
