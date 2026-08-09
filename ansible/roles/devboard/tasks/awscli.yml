@@ -1,0 +1,46 @@
+---
+# AWS CLI v2 is not in Ubuntu's archive; the `awscli` apt package is v1 and
+# lacks `aws eks get-token`, which every kubectl call against EKS depends on.
+# Upstream ships a zip installer instead.
+
+- name: Check for an existing AWS CLI
+  ansible.builtin.command:
+    cmd: /usr/local/bin/aws --version
+  register: devboard_awscli_check
+  changed_when: false
+  failed_when: false
+  tags:
+    - awscli
+
+- name: Install AWS CLI v2
+  when: devboard_awscli_check.rc != 0 or 'aws-cli/2.' not in (devboard_awscli_check.stderr + devboard_awscli_check.stdout)
+  block:
+    - name: Create a scratch directory for the AWS CLI installer
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: awscli
+      register: devboard_awscli_tmp
+
+    - name: Download the AWS CLI v2 archive
+      ansible.builtin.get_url:
+        url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ devboard_awscli_arch }}.zip"
+        dest: "{{ devboard_awscli_tmp.path }}/awscliv2.zip"
+        mode: "0644"
+
+    - name: Unpack the AWS CLI v2 archive
+      ansible.builtin.unarchive:
+        src: "{{ devboard_awscli_tmp.path }}/awscliv2.zip"
+        dest: "{{ devboard_awscli_tmp.path }}"
+        remote_src: true
+
+    - name: Run the AWS CLI v2 installer
+      ansible.builtin.command:
+        cmd: "{{ devboard_awscli_tmp.path }}/aws/install --update"
+        creates: /usr/local/bin/aws
+
+  always:
+    - name: Remove the AWS CLI scratch directory
+      ansible.builtin.file:
+        path: "{{ devboard_awscli_tmp.path }}"
+        state: absent
+      when: devboard_awscli_tmp.path is defined

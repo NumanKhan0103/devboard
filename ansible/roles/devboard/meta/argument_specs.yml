@@ -1,0 +1,52 @@
+---
+argument_specs:
+  main:
+    short_description: Provision an Ubuntu host with the DevBoard deployment toolchain
+    description:
+      - Installs AWS CLI v2, Terraform, kubectl, Helm, jq, dig, git and the
+        GitHub CLI, then verifies every version Deploy.md depends on.
+    options:
+      devboard_aws_region:
+        type: str
+        default: us-west-2
+        description: Region written to ~/.aws/config and exported in the shell profile.
+      devboard_user:
+        type: str
+        default: ubuntu
+        description: Login user the tooling and credentials are configured for.
+      devboard_kubectl_series:
+        type: str
+        default: v1.34
+        description: Kubernetes apt repo series; keep in step with the cluster version.
+      devboard_terraform_version:
+        type: str
+        default: ""
+        description: Exact apt version to pin, or empty for the newest available.
+      devboard_terraform_minimum:
+        type: str
+        default: "1.11.0"
+        description: Minimum acceptable Terraform version; the play fails below it.
+      devboard_aws_access_key_id:
+        type: str
+        default: ""
+        description: Access key id. Leave empty when using an IAM instance role.
+      devboard_aws_secret_access_key:
+        type: str
+        default: ""
+        description: Secret access key. Vault this; never commit it in clear.
+      devboard_clone_repo:
+        type: bool
+        default: false
+        description: Whether to clone the DevBoard repository onto the instance.
+      devboard_repo_url:
+        type: str
+        default: https://github.com/LondheShubham153/devboard.git
+        description: Repository to clone. Point this at your fork.
+      devboard_repo_version:
+        type: str
+        default: mega-project
+        description: Branch to check out.
+      devboard_base_packages:
+        type: list
+        elements: str
+        description: Packages installed from the Ubuntu archive.

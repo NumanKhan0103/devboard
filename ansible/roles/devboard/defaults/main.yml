@@ -1,0 +1,30 @@
+---
+devboard_aws_region: us-west-2
+devboard_user: ubuntu
+devboard_kubectl_series: v1.34
+devboard_terraform_version: ""
+
+devboard_clone_repo: false
+devboard_repo_url: https://github.com/LondheShubham153/devboard.git
+devboard_repo_version: mega-project
+
+# AWS credentials. Leave both empty to skip writing ~/.aws/credentials
+# entirely, which is what you want if the instance has an IAM role attached.
+# When you do set them, use ansible-vault:
+#   ansible-vault encrypt_string 'AKIA...' --name devboard_aws_access_key_id
+devboard_aws_access_key_id: ""
+devboard_aws_secret_access_key: ""
+
+# Minimum Terraform the project needs (S3-native state locking).
+devboard_terraform_minimum: "1.11.0"
+
+devboard_base_packages:
+  - ca-certificates
+  - curl
+  - dnsutils
+  - git
+  - gnupg
+  - jq
+  # deb822_repository needs this to manage .sources files.
+  - python3-debian
+  - unzip

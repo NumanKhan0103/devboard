@@ -1,0 +1,21 @@
+---
+# Region every tool defaults to. This is region place #1 of the five in
+# Deploy.md 0.4 — the other four live in the repo, not here.
+devboard_aws_region: us-west-2
+
+# The login user the tooling is installed for.
+devboard_user: ubuntu
+
+# Kubernetes apt repo series. Keep the minor version in step with
+# terraform/terraform.tfvars kubernetes_version so kubectl and the control
+# plane stay within the supported one-minor-version skew.
+devboard_kubectl_series: v1.34
+
+# Pin Terraform, or leave empty for the newest in the HashiCorp repo.
+# Deploy.md needs >= 1.11 for S3-native state locking.
+devboard_terraform_version: ""
+
+# Clone the project onto the instance as well.
+devboard_clone_repo: true
+devboard_repo_url: https://github.com/LondheShubham153/devboard.git
+devboard_repo_version: mega-project

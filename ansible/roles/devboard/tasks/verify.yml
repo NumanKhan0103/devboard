@@ -1,0 +1,56 @@
+---
+# Prove every tool Deploy.md 0.1 asks for is present and new enough. Failing
+# here is much cheaper than failing 20 minutes into a terraform apply.
+
+- name: Collect tool versions
+  ansible.builtin.command:
+    cmd: "{{ item.cmd }}"
+  register: devboard_versions
+  changed_when: false
+  loop:
+    - { name: aws, cmd: "aws --version" }
+    - { name: terraform, cmd: "terraform version -json" }
+    - { name: kubectl, cmd: "kubectl version --client=true -o yaml" }
+    - { name: helm, cmd: "helm version --short" }
+    - { name: jq, cmd: "jq --version" }
+    - { name: dig, cmd: "dig -v" }
+    - { name: git, cmd: "git --version" }
+    - { name: gh, cmd: "gh --version" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Extract the installed Terraform version
+  ansible.builtin.set_fact:
+    devboard_terraform_installed: >-
+      {{ (devboard_versions.results
+          | selectattr('item.name', 'equalto', 'terraform')
+          | first).stdout | from_json | json_query('terraform_version') }}
+
+- name: Assert Terraform is new enough for S3-native state locking
+  ansible.builtin.assert:
+    that:
+      - devboard_terraform_installed is version(devboard_terraform_minimum, '>=')
+    fail_msg: >-
+      Terraform {{ devboard_terraform_installed }} is older than
+      {{ devboard_terraform_minimum }}, which Deploy.md needs for use_lockfile.
+    success_msg: "Terraform {{ devboard_terraform_installed }} is new enough."
+
+- name: Report installed versions
+  ansible.builtin.debug:
+    msg: "{{ devboard_versions.results | map(attribute='stdout_lines') | map('first') | list }}"
+
+- name: Check the AWS identity the instance will use
+  ansible.builtin.command:
+    cmd: aws sts get-caller-identity --output json
+  become: true
+  become_user: "{{ devboard_user }}"
+  register: devboard_identity
+  changed_when: false
+  failed_when: false
+
+- name: Report the AWS identity
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'AWS identity: ' ~ (devboard_identity.stdout | from_json).Arn
+         if devboard_identity.rc == 0
+         else 'No working AWS credentials yet. Attach an IAM role, or set devboard_aws_access_key_id / devboard_aws_secret_access_key and re-run.' }}
