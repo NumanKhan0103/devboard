@@ -24,6 +24,9 @@ pieces connect*.
 > a GitHub Actions pipeline that builds SHA-tagged images and commits them back
 > for Argo CD to sync. Fifteen chapters, starting at
 > [`gitops/README.md`](gitops/README.md).
+>
+> **In a hurry?** [`Deploy.md`](Deploy.md) is the command-by-command runbook —
+> every step from an empty AWS account to HTTPS on your own domain.
 
 ---
 

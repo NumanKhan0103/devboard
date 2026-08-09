@@ -32,6 +32,9 @@ everything ──OTLP──▶ OpenTelemetry Collector ─┬─▶ Tempo      (
 
 ## Steps
 
+> Want it running first and the theory after? [`../Deploy.md`](../Deploy.md) is
+> the same path as a flat command runbook, with no explanations in the way.
+
 **Part 1 · Foundations**
 
 | # | File | What |

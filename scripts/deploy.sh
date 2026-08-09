@@ -148,4 +148,4 @@ else
   warn "Gateway has no address yet: kubectl -n devboard get gateway devboard-gateway"
 fi
 
-say "Done. Tear down with gitops/15-cleanup.md — namespaces BEFORE terraform destroy."
+say "Done. Tear down with Deploy.md section 15 — namespaces BEFORE terraform destroy."
