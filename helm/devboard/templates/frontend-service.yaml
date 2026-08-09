@@ -1,5 +1,3 @@
-# ClusterIP — the Gateway (HTTPRoute) is what exposes the frontend to the
-# internet, so we do not need NodePort/LoadBalancer here.
 apiVersion: v1
 kind: Service
 metadata:

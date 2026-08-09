@@ -1,6 +1,4 @@
 {{- if .Values.gateway.enabled }}
-# A Gateway asks the controller (Envoy Gateway) to provision a load balancer
-# (an AWS NLB on EKS) and listen for traffic. HTTPRoutes attach to it.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:

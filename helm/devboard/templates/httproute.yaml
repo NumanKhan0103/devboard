@@ -1,6 +1,4 @@
 {{- if .Values.gateway.enabled }}
-# Routes every path ("/") to the frontend Service. The frontend then proxies
-# /api/* to the backend internally, so we only need one rule here.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -15,15 +13,8 @@ spec:
     - {{ .Values.gateway.hostname | quote }}
   {{- end }}
   rules:
+    # Exact matches, not PathPrefix — see k8s/httproute.yml for the incident this prevents.
     {{- if .Values.ai.enabled }}
-    # Exact matches, not one PathPrefix. A prefix is a wildcard: publishing
-    # /ask also published /metrics to the internet at /api/ai/metrics.
-    #
-    # Tightening this file alone did NOT close that hole — the frontend
-    # container ran its own vite proxy with a blanket /api/ai rule, so whatever
-    # the Gateway declined fell through to "/" and the frontend forwarded it to
-    # ai-service regardless. See frontend/vite.preview.config.js for the other
-    # half of the fix.
     {{- range $ep := list "summarise" "ask" }}
     - matches:
         - path:
@@ -35,7 +26,6 @@ spec:
             path:
               type: ReplaceFullPath
               replaceFullPath: /{{ $ep }}
-      # CPU inference streams slowly — raise the default (~15s) route timeout.
       timeouts:
         request: "300s"
         backendRequest: "300s"
@@ -43,8 +33,6 @@ spec:
         - name: {{ $.Values.ai.serviceName }}
           port: {{ $.Values.ai.port }}
     {{- end }}
-    # No timeouts override: the 300s above is a property of STREAMING, not of
-    # the service. A health check needing five minutes is not a health check.
     - matches:
         - path:
             type: Exact

@@ -23,9 +23,6 @@ spec:
           ports:
             - containerPort: 5432
           env:
-            # All three come from the Secret that External Secrets Operator
-            # syncs from AWS. POSTGRES_USER used to come from a ConfigMap,
-            # which let the username drift out of step with the password.
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
@@ -41,9 +38,6 @@ spec:
                 secretKeyRef:
                   name: devboard-secrets
                   key: POSTGRES_DB
-            # Use a subdirectory as the data dir. On a real block device (EBS),
-            # the filesystem root has a lost+found directory, and Postgres won't
-            # initdb into a non-empty mount point.
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           readinessProbe:

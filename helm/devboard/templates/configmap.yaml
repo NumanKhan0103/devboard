@@ -1,11 +1,3 @@
-# The devboard-configmap that used to head this file is gone. Its only key was
-# POSTGRES_USER, which now travels with the password in the one Secret that
-# External Secrets Operator syncs — one source of truth instead of a ConfigMap
-# and a Secret that could silently disagree.
-#
-# Init scripts, mounted into Postgres at /docker-entrypoint-initdb.d and run once
-# on first boot (empty data volume). Loaded from the chart's files/ directory so
-# the SQL stays readable and un-templated ($$ in plpgsql is left untouched).
 apiVersion: v1
 kind: ConfigMap
 metadata:

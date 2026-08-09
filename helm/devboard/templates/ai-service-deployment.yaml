@@ -33,9 +33,6 @@ spec:
             - name: MODEL_NAME
               value: {{ .Values.ai.modelName | quote }}
             {{- if .Values.observability.enabled }}
-            # Read by `opentelemetry-instrument` (the Dockerfile CMD), not by
-            # any code in app/. That is what zero-code instrumentation means:
-            # the entrypoint changes, the source does not.
             - name: OTEL_SERVICE_NAME
               value: ai-service
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
@@ -48,8 +45,6 @@ spec:
               value: otlp
             - name: OTEL_METRICS_EXPORTER
               value: otlp
-            # Logs over OTLP carry trace_id as a structured field, so Loki
-            # links them to traces with no regex.
             - name: OTEL_LOGS_EXPORTER
               value: otlp
             - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
@@ -57,17 +52,12 @@ spec:
             - name: OTEL_PYTHON_LOG_CORRELATION
               value: "true"
             {{- end }}
-          # Readiness stays on /health and deliberately does NOT check Ollama —
-          # see the long note in k8s/ai-service-deployment.yml. Coupling
-          # readiness to a dependency turns one outage into a cascading one.
           livenessProbe:
             httpGet:
               path: /health
               port: {{ .Values.ai.port }}
             initialDelaySeconds: 10
             periodSeconds: 15
-            # Don't kill a pod over one slow probe while its threads are busy
-            # streaming.
             timeoutSeconds: 5
             failureThreshold: 4
           readinessProbe:
