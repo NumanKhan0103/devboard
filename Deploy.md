@@ -408,10 +408,13 @@ Already installed by §8, wave 0 and 1. Verify:
 kubectl -n cert-manager rollout status deploy/cert-manager
 kubectl get clusterissuer          # letsencrypt-staging, letsencrypt-prod: READY True
 
-# The switch that makes the Gateway API solver work at all:
-kubectl -n cert-manager get deploy cert-manager \
-  -o jsonpath='{.spec.template.spec.containers[0].args}' | tr ',' '\n' | grep gateway
-# --enable-gateway-api
+# The switch that makes the Gateway API solver work at all. The chart passes it
+# through --config, not as a CLI flag, so read the ConfigMap:
+kubectl -n cert-manager get cm cert-manager -o jsonpath='{.data.config\.yaml}'
+# apiVersion: controller.config.cert-manager.io/v1alpha1
+# gatewayAPI:
+#   enabled: true
+# kind: ControllerConfiguration
 ```
 
 If that flag is missing, cert-manager booted before the Gateway API CRDs existed.

@@ -79,11 +79,13 @@ say "Waiting for cert-manager"
 if wait_for cert-manager deploy/cert-manager 600 &&
    kubectl -n cert-manager rollout status deploy/cert-manager --timeout=8m >/dev/null 2>&1; then
   ok "cert-manager ready"
-  kubectl -n cert-manager get deploy cert-manager \
-    -o jsonpath='{.spec.template.spec.containers[0].args}' 2>/dev/null \
-    | grep -q 'enable-gateway-api' \
+  # The chart passes gatewayAPI via --config, not a CLI flag, so read the
+  # ControllerConfiguration ConfigMap rather than the container args.
+  kubectl -n cert-manager get cm cert-manager \
+    -o jsonpath='{.data.config\.yaml}' 2>/dev/null \
+    | grep -A1 'gatewayAPI' | grep -q 'enabled: true' \
     && ok "Gateway API support on" \
-    || warn "no --enable-gateway-api: restart it (kubectl -n cert-manager rollout restart deploy cert-manager)"
+    || warn "Gateway API support off: restart it (kubectl -n cert-manager rollout restart deploy cert-manager)"
 else
   warn "not ready — check: kubectl -n argocd get app cert-manager"
 fi
