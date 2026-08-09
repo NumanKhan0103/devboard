@@ -5,11 +5,11 @@ builds images and **commits the new image tag into the manifests**. ArgoCD sees
 that commit and deploys. CI never touches the cluster.
 
 ```
-push code to gitops ─▶ GitHub Actions (DevSecOps)
+push code to mega-project ─▶ GitHub Actions (DevSecOps)
    gates: lint · tests · gitleaks · dep-scan · trivy · sonar
       └▶ build & push  trainwithshubham/devboard-{backend,frontend,ai-service}:sha-<short>
            └▶ gitops-bump: write that tag into k8s/ + helm/values.yaml, commit back
-                └▶ ArgoCD (watches gitops) syncs to EKS
+                └▶ ArgoCD (watches mega-project) syncs to EKS
 push manifest-only ─▶ no build (path filter) ─▶ ArgoCD syncs
 ```
 
@@ -21,7 +21,7 @@ push manifest-only ─▶ no build (path filter) ─▶ ArgoCD syncs
 | `code-quality.yml` / `code-tests.yml` | lint + unit tests (backend, frontend, ai-service) |
 | `secret-scanning.yml` / `dependency-scan.yml` / `docker-scans.yml` / `sonar-scan.yml` | security & quality gates |
 | `docker-push.yml` | build + push the 3 images, tagged `sha-<short>` (+ `:latest`) |
-| `gitops-bump.yml` | write the tag into manifests, commit back to `gitops` |
+| `gitops-bump.yml` | write the tag into manifests, commit back to `mega-project` |
 | `dast.yml` | OWASP ZAP — **manual** (`workflow_dispatch`), pass the NLB URL |
 
 ## No infinite loop
@@ -55,9 +55,9 @@ message carries `[skip ci]`. Three independent safety nets.
 
 ## See it work
 
-1. Change something in `backend/`, `frontend/`, or `ai-service/`; push to `gitops`.
+1. Change something in `backend/`, `frontend/`, or `ai-service/`; push to `mega-project`.
 2. **Actions** tab → the run passes the gates and pushes 3 `sha-<short>` images.
-3. A commit `ci: deploy sha-… [skip ci]` appears on `gitops`.
+3. A commit `ci: deploy sha-… [skip ci]` appears on `mega-project`.
 4. ArgoCD syncs; confirm the live tag:
    ```bash
    kubectl -n devboard get deploy devboard-backend-deployment \

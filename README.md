@@ -236,7 +236,7 @@ The browser calls these as `/api/...`; the backend serves them at the root.
 
 ## CI/CD — DevSecOps + GitOps
 
-Pushing to the `gitops` branch runs the pipeline in
+Pushing to the `mega-project` branch runs the pipeline in
 [`.github/workflows/devsecops.yml`](.github/workflows/devsecops.yml):
 
 1. **Gates** (parallel) — code quality, secret scanning, dependency checks,
