@@ -14,10 +14,6 @@ spec:
     targetRevision: mega-project
     path: helm/devboard
     helm:
-      # Override any values.yaml defaults here. Example:
-      # valuesObject:
-      #   frontend:
-      #     replicas: 2
       releaseName: devboard
 
   destination:

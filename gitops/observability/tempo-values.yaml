@@ -26,11 +26,6 @@ tempo:
       # an orphaned bucket at teardown (gitops/15-cleanup.md already fights
       # orphaned EBS volumes and NLBs). 48h of local traces is honest for a
       # teaching cluster.
-      #
-      # In production you would flip this to:
-      #   backend: s3
-      #   s3: { bucket: ..., endpoint: s3.us-west-2.amazonaws.com, region: ... }
-      # and give the pod an IAM role. Five lines, and then Tempo is stateless.
       backend: local
       wal:
         path: /var/tempo/wal

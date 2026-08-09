@@ -1,18 +1,5 @@
 # Sends all traffic ("/") to the frontend Service. The frontend proxies /api/*
 # to the backend inside the cluster, so a single rule is enough.
-#
-# ADVANCED (optional): to route /api straight to the backend at the edge, add a
-# second rule with a URLRewrite filter that strips the /api prefix:
-#
-#   - matches:
-#       - path: { type: PathPrefix, value: /api }
-#     filters:
-#       - type: URLRewrite
-#         urlRewrite:
-#           path: { type: ReplacePrefixMatch, replacePrefixMatch: / }
-#     backendRefs:
-#       - name: backend
-#         port: 8080
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

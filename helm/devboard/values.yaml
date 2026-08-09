@@ -10,10 +10,6 @@ nameOverride: ""
 fullnameOverride: ""
 # -----------------------------------------------------------------------------
 # Secrets. The DB credentials used to live right here in cleartext:
-#
-#   user: devboard
-#   password: devboard        # <- in Git, in a public repo
-#
 # They now live in AWS Secrets Manager. External Secrets Operator reads them
 # and materialises the same "devboard-secrets" Secret the templates already
 # expected, so nothing downstream changed.
