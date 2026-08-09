@@ -1,0 +1,96 @@
+---
+# Installs the command line tools Deploy.md needs.
+#
+#   ansible-playbook -i inventory.ini 01-install-tools.yml
+
+- name: Install the deployment tools
+  hosts: devboard
+  become: true
+
+  tasks:
+    - name: Install the basics
+      ansible.builtin.apt:
+        name:
+          - curl
+          - dnsutils          # gives you `dig`, needed for the DNS step
+          - git
+          - jq
+          - python3-debian    # lets Ansible manage apt repos
+          - unzip
+        state: present
+        update_cache: true
+
+    # Terraform, kubectl, Helm and gh are not in Ubuntu's own package list, so
+    # we add each vendor's apt repository first.
+
+    - name: Add the Terraform repo
+      ansible.builtin.deb822_repository:
+        name: hashicorp
+        types: deb
+        uris: https://apt.releases.hashicorp.com
+        suites: "{{ ansible_distribution_release }}"
+        components: main
+        signed_by: https://apt.releases.hashicorp.com/gpg
+
+    - name: Add the kubectl repo
+      ansible.builtin.deb822_repository:
+        name: kubernetes
+        types: deb
+        uris: "https://pkgs.k8s.io/core:/stable:/{{ kubectl_version }}/deb/"
+        suites: "/"
+        signed_by: "https://pkgs.k8s.io/core:/stable:/{{ kubectl_version }}/deb/Release.key"
+
+    - name: Add the Helm repo
+      ansible.builtin.deb822_repository:
+        name: helm
+        types: deb
+        uris: https://baltocdn.com/helm/stable/debian/
+        suites: all
+        components: main
+        signed_by: https://baltocdn.com/helm/signing.asc
+
+    - name: Download the GitHub CLI key
+      ansible.builtin.get_url:
+        url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+        dest: /etc/apt/keyrings/githubcli.gpg
+        mode: "0644"
+
+    - name: Add the GitHub CLI repo
+      ansible.builtin.deb822_repository:
+        name: githubcli
+        types: deb
+        uris: https://cli.github.com/packages
+        suites: stable
+        components: main
+        signed_by: /etc/apt/keyrings/githubcli.gpg
+
+    - name: Install Terraform, kubectl, Helm and gh
+      ansible.builtin.apt:
+        name:
+          - terraform
+          - kubectl
+          - helm
+          - gh
+        state: present
+        update_cache: true
+
+    # Ubuntu's `awscli` package is version 1, which has no `aws eks get-token`.
+    # Every kubectl call against EKS needs that, so we install v2 from AWS.
+
+    - name: Download the AWS CLI v2
+      ansible.builtin.get_url:
+        url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_architecture }}.zip"
+        dest: /tmp/awscliv2.zip
+        mode: "0644"
+
+    - name: Unzip the AWS CLI v2
+      ansible.builtin.unarchive:
+        src: /tmp/awscliv2.zip
+        dest: /tmp
+        remote_src: true
+        creates: /tmp/aws/install
+
+    - name: Install the AWS CLI v2
+      ansible.builtin.command:
+        cmd: /tmp/aws/install --update
+        creates: /usr/local/bin/aws
