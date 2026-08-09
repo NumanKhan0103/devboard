@@ -1,4 +1,3 @@
-# Format and vet the backend against several Go toolchains.
 name: Go Linter
 
 on:
@@ -10,12 +9,6 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                # Floor is 1.25 because backend/go.mod now requires it: the
-                # OpenTelemetry Go SDK and otelgin both declare `go 1.25.0`.
-                #
-                # Testing older releases here would be theatre — Go 1.21+
-                # silently downloads whatever toolchain go.mod asks for, so a
-                # job labelled "1.23" would quietly build with 1.25 and pass.
                 go: ['1.25', '1.26']
         steps:
             - name: Code Checkout
@@ -24,9 +17,6 @@ jobs:
             - name: Setup Go
               uses: actions/setup-go@v6
               with:
-                # go-version only. Setting go-version-file alongside it is a
-                # conflict — the file would pin every matrix leg to the same
-                # version and the matrix would test nothing.
                 go-version: ${{ matrix.go }}
                 cache-dependency-path: backend/go.sum
 

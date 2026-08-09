@@ -1,10 +1,3 @@
-# GitOps handoff: write the freshly-built image tag into the manifests and
-# commit it back to the branch that triggered us. ArgoCD (watching that branch)
-# then syncs.
-#
-# The commit touches only k8s/ + helm/, which are NOT in the pipeline's push
-# `paths:` filter, and commits made with GITHUB_TOKEN don't trigger workflows —
-# so this can't cause a rebuild loop ([skip ci] is a third safety net).
 name: GitOps Image Bump
 
 on:
@@ -14,8 +7,6 @@ on:
         required: true
         type: string
 
-# Two bumps racing each other is what makes the push below fail. Serialise
-# first; retrying an unserialised push only makes the collision worse.
 concurrency:
   group: gitops-bump-${{ github.ref }}
   cancel-in-progress: false

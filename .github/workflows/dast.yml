@@ -1,5 +1,3 @@
-# OWASP ZAP baseline scan — run manually against a deployed URL.
-# The app is deployed by ArgoCD to a dynamic NLB hostname, so pass it in.
 name: OWASP ZAP DAST Scan
 
 on:

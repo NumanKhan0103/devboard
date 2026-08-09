@@ -1,4 +1,3 @@
-# SAST / linting for all three services.
 name: Code Quality
 
 on:
@@ -11,7 +10,6 @@ jobs:
             - name: Code Checkout
               uses: actions/checkout@v7
 
-            # --- frontend (React) ---
             - name: Setup NodeJs
               uses: actions/setup-node@v6
               with:
@@ -27,7 +25,6 @@ jobs:
               run: npm run lint
               working-directory: frontend
 
-            # --- backend (Go) ---
             - name: Setup Go
               uses: actions/setup-go@v6
               with:
@@ -42,7 +39,6 @@ jobs:
               run: go vet ./...
               working-directory: backend
 
-            # --- ai-service (Python) ---
             - name: Setup Python
               uses: actions/setup-python@v5
               with:
