@@ -11,10 +11,25 @@ spec:
     - name: http
       protocol: HTTP
       port: {{ .Values.gateway.listenerPort }}
-      {{- if .Values.gateway.hostname }}
+      {{- if and .Values.gateway.hostname (not .Values.gateway.tls.enabled) }}
       hostname: {{ .Values.gateway.hostname | quote }}
       {{- end }}
       allowedRoutes:
         namespaces:
           from: Same
+    {{- if and .Values.gateway.tls.enabled .Values.gateway.hostname }}
+    - name: https
+      protocol: HTTPS
+      port: {{ .Values.gateway.tls.port }}
+      hostname: {{ .Values.gateway.hostname | quote }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: {{ .Values.gateway.tls.secretName | default (printf "%s-tls" (include "devboard.fullname" .)) }}
+      allowedRoutes:
+        namespaces:
+          from: Same
+    {{- end }}
 {{- end }}

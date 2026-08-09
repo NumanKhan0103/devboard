@@ -32,7 +32,7 @@ the EBS volumes.
 
 ```bash
 kubectl delete namespace devboard devboard-helm ollama observability \
-                         external-secrets --ignore-not-found
+                         external-secrets cert-manager --ignore-not-found
 ```
 
 `observability` matters here: Prometheus, Tempo and Loki each hold a 10 GiB

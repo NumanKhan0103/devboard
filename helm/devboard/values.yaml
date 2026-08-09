@@ -80,4 +80,26 @@ gateway:
   enabled: true
   className: envoy
   listenerPort: 80
+  # Empty accepts any Host, which is what the raw load balancer URL needs.
   hostname: ""
+
+  # Off by default: the chart must still work with no cert-manager and no domain.
+  tls:
+    enabled: false
+    port: 443
+    # Must be in the Gateway's namespace. Empty -> "<fullname>-tls".
+    secretName: ""
+    createCertificate: true
+    issuerRef:
+      name: letsencrypt-prod
+      kind: ClusterIssuer
+    httpsRedirect: true
+
+# The shared ClusterIssuers in gitops/cert-manager/ hard-wire their solver to the
+# RAW stack's Gateway, so the Helm stack needs its own Issuer. Each stack gets
+# its own load balancer, so they need separate hostnames and DNS records.
+certManager:
+  createIssuer: false
+  issuerName: ""
+  server: https://acme-v02.api.letsencrypt.org/directory
+  email: trainwithshubham@gmail.com

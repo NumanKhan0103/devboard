@@ -1,0 +1,73 @@
+# cert-manager. Wave 0, next to External Secrets: both are operators whose CRDs
+# must exist before anything can reference them.
+#
+# cert-manager checks for the Gateway API CRDs ONLY at startup. If it boots
+# before Envoy Gateway installs them, gateway support stays off and every
+# Certificate sits Pending with no useful error. scripts/deploy.sh installs
+# Envoy Gateway (with --wait) before applying platform.yaml, so the order is
+# already right. If it ever isn't:
+#   kubectl -n cert-manager rollout restart deploy cert-manager
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+
+  source:
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: "v1.21.1"
+    helm:
+      valuesObject:
+        crds:
+          enabled: true
+          keep: true
+
+        # The only switch needed for Gateway API. Renders --enable-gateway-api.
+        # The old --feature-gates=ExperimentalGatewayAPISupport is obsolete: it
+        # defaulted true in v1.15 and went GA in v1.18.
+        config:
+          apiVersion: controller.config.cert-manager.io/v1alpha1
+          kind: ControllerConfiguration
+          gatewayAPI:
+            enabled: true
+
+        # Ask public resolvers for the HTTP-01 self-check instead of trusting
+        # CoreDNS's cached view of a brand-new record.
+        extraArgs:
+          - --acme-http01-solver-nameservers=8.8.8.8:53,1.1.1.1:53
+
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        webhook:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+        cainjector:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 128Mi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # ServerSideApply: cert-manager's CRDs exceed the 262144-byte last-applied-configuration limit.
+      - ServerSideApply=true

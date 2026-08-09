@@ -1,0 +1,32 @@
+# HTTP -> HTTPS, scoped to the real hostname. A blanket redirect would also
+# bounce the raw load balancer URL that chapters 07 and 09 still teach.
+#
+# This does not break ACME. Gateway API resolves conflicts by hostname first,
+# then by match specificity. This route and cert-manager's temporary solver
+# route carry the same hostname, so the tiebreak falls to match precedence,
+# where Exact beats Prefix — the solver's Exact
+# /.well-known/acme-challenge/<token> wins over the PathPrefix "/" below.
+#
+# sectionName is required. Without it this attaches to :443 as well and
+# redirects HTTPS to HTTPS, which is an infinite loop.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: devboard-https-redirect
+  namespace: devboard
+spec:
+  parentRefs:
+    - name: devboard-gateway
+      sectionName: http
+  hostnames:
+    - devboard.trainwithshubham.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301

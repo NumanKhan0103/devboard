@@ -6,9 +6,29 @@ metadata:
 spec:
   gatewayClassName: envoy
   listeners:
+    # Port 80 is not vestigial: Let's Encrypt reaches the HTTP-01 challenge in
+    # the clear, and httproute-redirect.yml serves the redirect. No hostname, so
+    # the raw load balancer URL from chapters 07 and 09 keeps working.
     - name: http
       protocol: HTTP
       port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+
+    # Add this only once the devboard-tls Secret exists. Applied early, Envoy
+    # marks this listener ResolvedRefs=False and leaves :80 serving, so the site
+    # stays up but nothing answers on 443.
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: devboard.trainwithshubham.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: devboard-tls
       allowedRoutes:
         namespaces:
           from: Same

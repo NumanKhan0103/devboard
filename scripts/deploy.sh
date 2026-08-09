@@ -75,6 +75,19 @@ else
   warn "not ready — check: kubectl -n argocd get app external-secrets"
 fi
 
+say "Waiting for cert-manager"
+if wait_for cert-manager deploy/cert-manager 600 &&
+   kubectl -n cert-manager rollout status deploy/cert-manager --timeout=8m >/dev/null 2>&1; then
+  ok "cert-manager ready"
+  kubectl -n cert-manager get deploy cert-manager \
+    -o jsonpath='{.spec.template.spec.containers[0].args}' 2>/dev/null \
+    | grep -q 'enable-gateway-api' \
+    && ok "Gateway API support on" \
+    || warn "no --enable-gateway-api: restart it (kubectl -n cert-manager rollout restart deploy cert-manager)"
+else
+  warn "not ready — check: kubectl -n argocd get app cert-manager"
+fi
+
 # --- 3. The application ---
 say "DevBoard (raw manifests -> namespace 'devboard')"
 kubectl apply -f gitops/argocd/devboard-raw.yaml >/dev/null
