@@ -3,8 +3,6 @@ kind: RoleBinding
 metadata:
   name: devboard-intern-role-binding
   namespace: devboard
-# Binds the devboard-intern ServiceAccount (see service-account.yml) to the
-# read-mostly intern Role.
 subjects:
 - kind: ServiceAccount
   name: devboard-intern

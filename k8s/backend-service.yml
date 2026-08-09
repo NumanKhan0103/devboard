@@ -7,8 +7,6 @@ spec:
   selector:
     app: devboard-backend
   ports:
-  # Named so a ServiceMonitor can select it — endpoints[].port matches the
-  # port NAME, not the number.
   - name: http
     protocol: TCP
     port: 8080 # service

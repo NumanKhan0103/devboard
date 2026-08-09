@@ -1,4 +1,3 @@
-# The frontend proxy and the Gateway route both target this at ai-service:3005.
 kind: Service
 apiVersion: v1
 metadata:
@@ -8,9 +7,6 @@ spec:
   selector:
     app: devboard-ai-service
   ports:
-    # The port NAME matters: a ServiceMonitor's endpoints[].port matches this
-    # string, not the number. Unnamed ports are why Prometheus would silently
-    # scrape nothing here — no error, just no data.
     - name: http
       protocol: TCP
       port: 3005

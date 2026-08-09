@@ -17,7 +17,6 @@ spec:
     spec:
       containers:
       - name: devboard-frontend
-        # ":ai" includes the AI Assistant page (rebuilt image).
         image: trainwithshubham/devboard-frontend:sha-e2bb744
         ports:
         - containerPort: 4173
@@ -40,6 +39,4 @@ spec:
           limits:
             cpu: 250m
             memory: 128Mi
-
-
 

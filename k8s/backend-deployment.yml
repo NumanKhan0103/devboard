@@ -21,8 +21,6 @@ spec:
         ports:
           - containerPort: 8080
         env:
-          # One Secret, synced from AWS Secrets Manager by External Secrets
-          # Operator. POSTGRES_USER used to live in a separate ConfigMap.
           - name: POSTGRES_USER
             valueFrom:
               secretKeyRef:
@@ -47,10 +45,6 @@ spec:
           - name: PORT
             value: "8080"
 
-          # --- OpenTelemetry ---------------------------------------------
-          # Read by the SDK wired up in backend/tracing.go. Note this is gRPC
-          # (:4317) while ai-service uses HTTP (:4318) — same data, different
-          # transport, chosen per language for reasons explained in each place.
           - name: OTEL_SERVICE_NAME
             value: backend
           - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -78,5 +72,4 @@ spec:
           limits:
             cpu: 250m
             memory: 192Mi   # GitOps demo: bumped from 128Mi via a Git change
-
 

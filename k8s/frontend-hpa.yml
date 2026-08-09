@@ -16,6 +16,4 @@ spec:
         name: cpu
         target:
           type: Utilization
-          # 60% is a sane scale-out threshold. (10% was so low the frontend
-          # scaled to maxReplicas even while idle.)
           averageUtilization: 60

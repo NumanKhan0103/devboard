@@ -1,5 +1,3 @@
-# Sends all traffic ("/") to the frontend Service. The frontend proxies /api/*
-# to the backend inside the cluster, so a single rule is enough.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -9,21 +7,7 @@ spec:
   parentRefs:
     - name: devboard-gateway
   rules:
-    # Expose exactly the endpoints you mean to expose.
-    #
-    # This used to be one `PathPrefix: /api/ai` rule. A prefix is a wildcard,
-    # so publishing /ask also published /metrics — the Prometheus endpoint was
-    # reachable from the internet at /api/ai/metrics as a side effect.
-    #
-    # Tightening THIS file was necessary but not sufficient, and the reason is
-    # worth remembering: the frontend container ran its own vite proxy with a
-    # blanket /api/ai rule, so anything the Gateway declined to match fell
-    # through to "/" and the frontend forwarded it to ai-service anyway. Two
-    # independent doors; locking one changed nothing. Verified by curling the
-    # frontend pod directly with the Gateway bypassed entirely.
-    #
-    # The second door is closed in frontend/vite.preview.config.js. When you
-    # restrict a route, go looking for the other paths to the same service.
+    # Exact, not PathPrefix: a prefix once exposed /api/ai/metrics. The vite proxy was a second door.
     - matches:
         - path:
             type: Exact
@@ -34,8 +18,6 @@ spec:
             path:
               type: ReplaceFullPath
               replaceFullPath: /summarise
-      # CPU inference streams slowly — raise the default (~15s) route timeout so
-      # Envoy doesn't cut off the SSE response.
       timeouts:
         request: "300s"
         backendRequest: "300s"
@@ -60,9 +42,6 @@ spec:
         - name: ai-service
           port: 3005
 
-    # No timeouts override here, deliberately. The 300s above is a property of
-    # STREAMING, not of the service — a health check that needs five minutes is
-    # not a health check.
     - matches:
         - path:
             type: Exact
@@ -76,7 +55,6 @@ spec:
       backendRefs:
         - name: ai-service
           port: 3005
-    # everything else → frontend (which proxies /api → backend internally)
     - matches:
         - path:
             type: PathPrefix

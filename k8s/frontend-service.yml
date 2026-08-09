@@ -1,7 +1,3 @@
-# ClusterIP: on EKS the Gateway (see gateway.yml + httproute.yml) exposes the
-# frontend to the internet, so we no longer need NodePort.
-# (On a local kind cluster without a Gateway controller, use `kubectl port-forward`
-#  svc/devboard-frontend-service 8080:8080 instead.)
 kind: Service
 apiVersion: v1
 metadata:
