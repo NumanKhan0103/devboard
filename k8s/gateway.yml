@@ -6,9 +6,8 @@ metadata:
 spec:
   gatewayClassName: envoy
   listeners:
-    # Port 80 is not vestigial: Let's Encrypt reaches the HTTP-01 challenge in
-    # the clear, and httproute-redirect.yml serves the redirect. No hostname, so
-    # the raw load balancer URL from chapters 07 and 09 keeps working.
+    # Port 80 carries the ACME challenge and the redirect. No hostname, so the
+    # raw load balancer URL keeps working.
     - name: http
       protocol: HTTP
       port: 80
@@ -16,9 +15,8 @@ spec:
         namespaces:
           from: Same
 
-    # Add this only once the devboard-tls Secret exists. Applied early, Envoy
-    # marks this listener ResolvedRefs=False and leaves :80 serving, so the site
-    # stays up but nothing answers on 443.
+    # Needs the devboard-tls Secret. Without it this listener alone goes
+    # ResolvedRefs=False; :80 keeps serving.
     - name: https
       protocol: HTTPS
       port: 443

@@ -1,12 +1,6 @@
-# cert-manager. Wave 0, next to External Secrets: both are operators whose CRDs
-# must exist before anything can reference them.
-#
-# cert-manager checks for the Gateway API CRDs ONLY at startup. If it boots
-# before Envoy Gateway installs them, gateway support stays off and every
-# Certificate sits Pending with no useful error. scripts/deploy.sh installs
-# Envoy Gateway (with --wait) before applying platform.yaml, so the order is
-# already right. If it ever isn't:
-#   kubectl -n cert-manager rollout restart deploy cert-manager
+# cert-manager. Wave 0, next to External Secrets: both are operators with CRDs.
+# It checks for the Gateway API CRDs only at STARTUP - boot it before Envoy
+# Gateway and every Certificate sits Pending. Fix: rollout restart deploy cert-manager.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -27,17 +21,14 @@ spec:
           enabled: true
           keep: true
 
-        # The only switch needed for Gateway API. Renders --enable-gateway-api.
-        # The old --feature-gates=ExperimentalGatewayAPISupport is obsolete: it
-        # defaulted true in v1.15 and went GA in v1.18.
+        # Renders --enable-gateway-api. The old ExperimentalGatewayAPISupport gate is obsolete.
         config:
           apiVersion: controller.config.cert-manager.io/v1alpha1
           kind: ControllerConfiguration
           gatewayAPI:
             enabled: true
 
-        # Ask public resolvers for the HTTP-01 self-check instead of trusting
-        # CoreDNS's cached view of a brand-new record.
+        # Public resolvers for the HTTP-01 self-check; CoreDNS caches a stale answer.
         extraArgs:
           - --acme-http01-solver-nameservers=8.8.8.8:53,1.1.1.1:53
 

@@ -1,11 +1,6 @@
-# TLS certificate for the public hostname, issued by Let's Encrypt.
-#
-# The Secret lands in THIS namespace, which is why the Certificate lives here: a
-# Gateway listener may only reference a Secret in its own namespace without a
-# ReferenceGrant. Gateway is in devboard, Secret is in devboard.
-#
-# Start on letsencrypt-staging, confirm Ready=True, then switch to
-# letsencrypt-prod. Change it in GIT — ArgoCD selfHeal reverts kubectl patch.
+# Lives in devboard because a Gateway listener can only reference a Secret in its
+# own namespace. Start on staging, confirm Ready, then switch to prod - in GIT,
+# since selfHeal reverts kubectl patch.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
