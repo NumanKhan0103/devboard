@@ -1,9 +1,3 @@
-# DevBoard's hand-written Grafana dashboards, as a tiny local Helm chart.
-#
-# The chart's only job is to wrap each .json file in a ConfigMap labelled
-# grafana_dashboard=1, which the Grafana sidecar watches for. That keeps the
-# round trip open: edit a dashboard in Grafana's UI, copy its JSON Model into
-# a file here, commit — and it is now version-controlled like everything else.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -15,7 +9,6 @@ spec:
   project: default
 
   source:
-    # Change repoURL to YOUR fork.
     repoURL: https://github.com/LondheShubham153/devboard.git
     targetRevision: mega-project
     path: gitops/observability/dashboards

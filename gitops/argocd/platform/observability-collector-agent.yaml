@@ -1,10 +1,4 @@
 # OpenTelemetry Collector, per-node agent. Wave 2: it forwards to the gateway.
-#
-# Two sources, which is the useful bit. Source 1 is the upstream chart straight
-# from its Helm repo; source 2 is THIS repo contributing only a values file
-# (note it has no `path`, just a `ref`). $values resolves to it. That is how
-# you keep someone else's chart and your own configuration in two different
-# places without vendoring the chart or inlining YAML inside YAML.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -23,8 +17,7 @@ spec:
         valueFiles:
           - $values/gitops/observability/collector-agent-values.yaml
 
-    - # Change repoURL to YOUR fork.
-      repoURL: https://github.com/LondheShubham153/devboard.git
+    - repoURL: https://github.com/LondheShubham153/devboard.git
       targetRevision: mega-project
       ref: values
 
@@ -38,6 +31,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      # Several of these charts ship CRDs larger than the 262144-byte limit on
-      # the last-applied-configuration annotation client-side apply writes.
       - ServerSideApply=true

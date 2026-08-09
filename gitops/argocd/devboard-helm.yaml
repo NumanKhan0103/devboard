@@ -1,4 +1,3 @@
-# ArgoCD Application — deploys DevBoard WITH Helm, from the chart in
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -8,8 +7,6 @@ spec:
   project: default
 
   source:
-    # Change repoURL to YOUR fork. ArgoCD syncs from whatever is here — if it
-    # still points upstream, your CI pushes will never reach the cluster.
     repoURL: https://github.com/LondheShubham153/devboard.git
     targetRevision: mega-project
     path: helm/devboard
@@ -20,7 +17,6 @@ spec:
     server: https://kubernetes.default.svc
     namespace: devboard-helm
 
-  # The frontend Deployment's replica count is owned by the HPA, not Git.
   ignoreDifferences:
     - group: apps
       kind: Deployment

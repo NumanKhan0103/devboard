@@ -96,6 +96,38 @@ CRD-dependent config (wave 4).
 kubectl -n observability get pods
 ```
 
+## Two sources, and why
+
+Open any of `gitops/argocd/platform/observability-*.yaml` and you'll see
+`spec.sources` with **two** entries rather than the usual one:
+
+```yaml
+  sources:
+    - repoURL: https://grafana-community.github.io/helm-charts
+      chart: loki
+      targetRevision: "18.7.5"
+      helm:
+        valueFiles:
+          - $values/gitops/observability/loki-values.yaml
+
+    - repoURL: https://github.com/LondheShubham153/devboard.git
+      targetRevision: mega-project
+      ref: values
+```
+
+Source 1 is the upstream chart, straight from its Helm repo. Source 2 is *this*
+repo contributing nothing but a values file — note it has no `path`, only a
+`ref: values`, and `$values` resolves to it.
+
+That is how you keep someone else's chart and your own configuration in two
+separate places without vendoring the chart or inlining a wall of YAML inside
+the Application. When the chart releases a new version you bump one string.
+
+The second entry is a list item, so if you ever edit these files by hand, keep
+the `-` that starts it. Merge the two entries by accident and the Application
+picks up the fork's `repoURL` as its chart repo, which fails in a way that does
+not obviously point back at the edit.
+
 > ⚠️ The `observability-config` Application attaches an `EnvoyProxy` resource
 > to the **GatewayClass**, which affects every Gateway of class `envoy` — both
 > DevBoard stacks. If you get it wrong, you lose both public URLs. Know the

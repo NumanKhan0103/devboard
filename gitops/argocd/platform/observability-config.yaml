@@ -1,15 +1,3 @@
-# The glue: EnvoyProxy tracing config, ServiceMonitors, and alerting rules.
-#
-# Kept in its own Application, in the LAST wave, for two reasons:
-#
-#   - ServiceMonitor and PrometheusRule are CRDs owned by the Prometheus
-#     Operator, and EnvoyProxy is a CRD owned by Envoy Gateway. None of these
-#     manifests can even be validated until those operators are installed.
-#
-#   - The EnvoyProxy's backendRefs point at the otel-collector-gateway Service.
-#     Attaching it to the GatewayClass before that Service exists risks the
-#     GatewayClass going Accepted=False — which takes BOTH DevBoard stacks off
-#     the internet. See the rollback note in envoyproxy-telemetry.yaml.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -21,7 +9,6 @@ spec:
   project: default
 
   source:
-    # Change repoURL to YOUR fork.
     repoURL: https://github.com/LondheShubham153/devboard.git
     targetRevision: mega-project
     path: gitops/observability/manifests
