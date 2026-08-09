@@ -1,81 +1,88 @@
-# Ansible: the deployment workstation
+# Set up the EC2 machine with Ansible
 
-Provisions an Ubuntu EC2 instance with everything [`../Deploy.md`](../Deploy.md)
-section 0.1 asks for, then asserts the versions are right — so a wrong Terraform
-fails here in seconds rather than twenty minutes into an apply.
+Two files. One playbook that installs everything [`../Deploy.md`](../Deploy.md)
+needs, and an inventory that says which machine to install it on.
 
-Installs: **AWS CLI v2**, **Terraform**, **kubectl**, **Helm**, **jq**, **dig**,
-**git**, **gh**. No Docker — CI builds the images and ArgoCD deploys them, so the
-instance never needs it.
+```
+ansible/
+  inventory.ini    which machine
+  playbook.yml     what to install
+```
 
-## Instance sizing
+Installs **AWS CLI v2, Terraform, kubectl, Helm, jq, dig, git, gh**. No Docker —
+GitHub Actions builds the images and ArgoCD deploys them, so the machine never
+needs it.
 
-`t3.small` is enough. Everything here runs *against* the cluster; nothing runs on
-the box. Ubuntu 22.04 or 24.04, x86_64 or arm64 (the role detects which).
+## What you need
+
+- An Ubuntu EC2 instance (`t3.small` is plenty — nothing runs *on* this box, it
+  only talks to the cluster)
+- Its public IP and your `.pem` key file
+- Ansible on your laptop: `brew install ansible` or `pip install ansible`
 
 ## Run it
 
+**1. Edit `inventory.ini`** — put in your IP and key file:
+
+```ini
+[devboard]
+my-ec2 ansible_host=1.2.3.4 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/my-key.pem
+```
+
+**2. Edit the `vars:` block at the top of `playbook.yml`** — your AWS keys and
+your fork's URL:
+
+```yaml
+    aws_access_key: "AKIA..."
+    aws_secret_key: "wJalr..."
+    repo_url: https://github.com/YOUR-USERNAME/devboard.git
+```
+
+**3. Run it:**
+
 ```bash
 cd ansible
-ansible-galaxy collection install -r requirements.yml
-
-# 1. point the inventory at your instance
-$EDITOR inventory/hosts.yml        # ansible_host, ansible_ssh_private_key_file
-
-# 2. add your AWS keys, encrypted
-ansible-vault encrypt_string 'AKIA...'   --name devboard_aws_access_key_id
-ansible-vault encrypt_string 'wJalr...'  --name devboard_aws_secret_access_key
-# paste both blocks into inventory/group_vars/all.yml
-
-# 3. go
-ansible-playbook site.yml --ask-vault-pass
+ansible-playbook -i inventory.ini playbook.yml
 ```
 
-Then:
+It prints every tool's version at the end, so you can see it worked.
+
+**4. Log in and start deploying:**
 
 ```bash
-ssh ubuntu@<your-instance>
+ssh ubuntu@1.2.3.4
 aws sts get-caller-identity
-cd devboard && less Deploy.md          # start at section 0.3
+cd devboard && less Deploy.md
 ```
 
-## Credentials
+## About those AWS keys
 
-The playbook writes `~/.aws/credentials` at mode `0600` with `no_log: true`, but
-long-lived keys on a disk are the weaker option. **Attaching an IAM role to the
-instance is better** — leave `devboard_aws_access_key_id` empty and the
-credentials file is skipped entirely; the AWS CLI picks the role up on its own.
-Either way the role needs EKS, VPC, IAM, S3 and Secrets Manager permissions.
+Putting keys in a file is the easy way, not the safe way. Two better options
+when you are ready:
 
-## Useful variables
+- **Attach an IAM role to the EC2 instance.** Then leave `aws_access_key` empty —
+  the playbook skips the credentials file and the AWS CLI finds the role by
+  itself. Nothing to leak, nothing to rotate.
+- **Encrypt them** so they are not sitting in a file in plain text:
+  ```bash
+  ansible-vault encrypt_string 'AKIA...' --name aws_access_key
+  ```
+  Paste the output into `vars:` and run with `--ask-vault-pass`.
 
-Set these in `inventory/group_vars/all.yml`.
+Either way the account needs EKS, VPC, IAM, S3 and Secrets Manager permissions.
 
-| Variable | Default | Notes |
-| --- | --- | --- |
-| `devboard_aws_region` | `us-west-2` | Region place #1 of the five in Deploy.md 0.4 |
-| `devboard_kubectl_series` | `v1.34` | Keep in step with `kubernetes_version` in `terraform/terraform.tfvars` |
-| `devboard_terraform_version` | `""` | Empty means newest; set to pin an apt version |
-| `devboard_clone_repo` | `true` | Clones the repo to `~/devboard` |
-| `devboard_repo_url` | upstream | **Point this at your fork** |
+## Running it again
 
-## Re-running
-
-Idempotent — safe to re-run. Tags let you redo one piece:
+Safe to re-run any time — Ansible skips what is already done.
 
 ```bash
-ansible-playbook site.yml --tags verify      # just re-check versions
-ansible-playbook site.yml --tags awscli
-ansible-playbook site.yml --check --diff     # dry run
+ansible-playbook -i inventory.ini playbook.yml --check    # dry run, changes nothing
 ```
 
-## Validation
+## If something breaks
 
-`yamllint`, `ansible-playbook --syntax-check` and `ansible-lint` all pass, the
-last at its **production** profile.
-
-```bash
-yamllint -d "{extends: relaxed, rules: {line-length: disable}}" .
-ansible-playbook site.yml --syntax-check
-ansible-lint
-```
+| Problem | Fix |
+| --- | --- |
+| `UNREACHABLE` / permission denied | `chmod 400 ~/.ssh/my-key.pem`, and check the security group allows SSH from your IP |
+| `sudo: a password is required` | Add `--ask-become-pass`, or use the `ubuntu` user which has passwordless sudo |
+| Wrong Ubuntu user | Amazon Linux uses `ec2-user`, not `ubuntu` — this playbook expects Ubuntu |

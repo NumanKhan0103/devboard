@@ -1,7 +1,0 @@
----
-# Everything in this project uses ansible.builtin, so no collections are
-# strictly required. ansible.posix is listed because it ships useful modules
-# you will likely reach for when extending the role.
-collections:
-  - name: ansible.posix
-    version: ">=1.5.4"
