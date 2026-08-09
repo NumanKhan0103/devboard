@@ -4,7 +4,7 @@ Everything so far was setup. This is the chapter where it pays.
 
 ```bash
 ADDR=$(kubectl -n devboard get gateway devboard-gateway -o jsonpath='{.status.addresses[0].value}')
-kubectl -n observability port-forward svc/grafana 3000:80 &
+kubectl -n observability port-forward svc/observability-grafana 3000:80 &
 ```
 
 ## The happy path first

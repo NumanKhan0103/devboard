@@ -145,7 +145,7 @@ if [ -n "${ADDR:-}" ]; then
   echo "      -H 'content-type: application/json' \\"
   echo "      -d '{\"project_id\":\"1\",\"question\":\"what is blocked?\"}'"
   echo
-  echo "    kubectl -n observability port-forward svc/grafana 3000:80"
+  echo "    kubectl -n observability port-forward svc/observability-grafana 3000:80"
 else
   warn "Gateway has no address yet: kubectl -n devboard get gateway devboard-gateway"
 fi

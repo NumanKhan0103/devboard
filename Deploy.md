@@ -514,7 +514,7 @@ Everything lives in the `observability` namespace.
 ### 13.1 Open Grafana
 
 ```bash
-kubectl -n observability port-forward svc/grafana 3000:80
+kubectl -n observability port-forward svc/observability-grafana 3000:80
 ```
 
 <http://localhost:3000> — **`admin` / `devboard`**.

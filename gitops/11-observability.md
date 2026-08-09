@@ -189,7 +189,7 @@ real. (Then take `debug` back out — it is noisy and it costs CPU.)
 ## Open Grafana
 
 ```bash
-kubectl -n observability port-forward svc/grafana 3000:80
+kubectl -n observability port-forward svc/observability-grafana 3000:80
 ```
 
 http://localhost:3000 — `admin` / `devboard`.
