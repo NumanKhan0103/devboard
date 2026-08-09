@@ -24,9 +24,14 @@
       register: tool_check
       changed_when: false
 
+    # `dig -v` prints to stderr with nothing on stdout, so take whichever is
+    # non-empty rather than assuming stdout.
     - name: Show the versions
       ansible.builtin.debug:
-        msg: "{{ tool_check.results | map(attribute='stdout_lines') | map('first') | list }}"
+        msg: "{{ (item.stdout or item.stderr).splitlines() | first }}"
+      loop: "{{ tool_check.results }}"
+      loop_control:
+        label: "{{ item.item }}"
 
     # Deploy.md needs 1.11 or newer for S3-native state locking (use_lockfile).
     - name: Check Terraform is new enough
