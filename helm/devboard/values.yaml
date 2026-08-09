@@ -25,7 +25,7 @@ postgres:
 backend:
   image:
     repository: trainwithshubham/devboard-backend
-    tag: sha-e2bb744
+    tag: sha-4945e5b
     pullPolicy: IfNotPresent
   replicas: 1
   serviceName: backend
@@ -40,7 +40,7 @@ backend:
 frontend:
   image:
     repository: trainwithshubham/devboard-frontend
-    tag: sha-e2bb744
+    tag: sha-4945e5b
     pullPolicy: IfNotPresent
   replicas: 1
   containerPort: 4173
@@ -61,7 +61,7 @@ ai:
   enabled: true
   image:
     repository: trainwithshubham/devboard-ai-service
-    tag: sha-e2bb744
+    tag: sha-4945e5b
     pullPolicy: IfNotPresent
   replicas: 1
   serviceName: ai-service
@@ -82,7 +82,6 @@ gateway:
   listenerPort: 80
   # Empty accepts any Host, which is what the raw load balancer URL needs.
   hostname: ""
-
   # Off by default: the chart must still work with no cert-manager and no domain.
   tls:
     enabled: false
@@ -94,7 +93,6 @@ gateway:
       name: letsencrypt-prod
       kind: ClusterIssuer
     httpsRedirect: true
-
 # The shared ClusterIssuers in gitops/cert-manager/ hard-wire their solver to the
 # RAW stack's Gateway, so the Helm stack needs its own Issuer. Each stack gets
 # its own load balancer, so they need separate hostnames and DNS records.
