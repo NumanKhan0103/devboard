@@ -1,56 +1,7 @@
-# OpenTelemetry Collector — GATEWAY role (a Deployment).
-#
-# We run the Collector twice, in two different roles, and the split is worth
-# understanding before reading the config:
-#
-#   AGENT (DaemonSet, see collector-agent-values.yaml)
-#     One per node. It is the only thing that can read /var/log/pods on its own
-#     node's disk, which is the entire reason it exists. It enriches and
-#     forwards; it knows nothing about Tempo or Loki.
-#
-#   GATEWAY (this file, a Deployment)
-#     A small, horizontally scalable service. The single place that knows where
-#     data actually goes, and the single place to do cluster-wide work like
-#     deriving metrics from spans. Apps and Envoy push straight here.
-#
-# Chart: open-telemetry/opentelemetry-collector 0.169.0
-
 mode: deployment
 replicaCount: 1        # stateless — raise it once you trust the pipeline
 
-# Chart 0.169.0 has no default image or command; both must be set explicitly.
-#
-# CONTRIB, not the slim "-k8s" distribution. Two things bit us here, and both
-# are worth knowing BEFORE you write a Collector config.
-#
-# 1. Distributions ship different component sets, and a component that isn't
-#    compiled in fails at STARTUP — CrashLoopBackOff, not a validation error:
-#
-#      'exporters' unknown type: "prometheus_remote_write"
-#      (valid values: [otelarrow nop otlp_grpc otlp_http ... debug file])
-#
-#    The -k8s distro has neither the Prometheus remote-write exporter nor the
-#    span-metrics connector. The node agent stays on -k8s (it only needs
-#    filelog/k8sattributes/hostmetrics, which -k8s does have); the gateway
-#    needs contrib.
-#
-# 2. v0.149.0 renamed components to snake_case, and the rename is SYSTEMATIC —
-#    it is not just the two everyone blogs about:
-#
-#      k8sattributes         -> k8s_attributes
-#      filelog               -> file_log
-#      spanmetrics           -> span_metrics
-#      prometheusremotewrite -> prometheus_remote_write
-#      otlp (exporter)       -> otlp_grpc
-#      otlphttp              -> otlp_http
-#
-#    Every tutorial written before that release uses the old names. The chart
-#    can auto-rewrite them, but this file is a teaching artifact and should
-#    read as current. When in doubt, ask the binary rather than the internet:
-#
-#      kubectl run probe --rm -i --restart=Never \
-#        --image=otel/opentelemetry-collector-contrib \
-#        --command -- /otelcol-contrib components
+# contrib, not -k8s: -k8s lacks these components. v0.149.0 renamed them all to snake_case.
 image:
   repository: otel/opentelemetry-collector-contrib
 command:
@@ -58,8 +9,6 @@ command:
 
 fullnameOverride: otel-collector-gateway
 
-# k8s_attributes asks the API server which pod owns an incoming connection, so
-# the Collector needs read access to pods and namespaces.
 clusterRole:
   create: true
   rules:
@@ -83,7 +32,6 @@ ports:
     enabled: true
   otlp-http:
     enabled: true
-  # Where Prometheus scrapes the metrics that spanmetrics derives from traces.
   prometheus:
     enabled: true
     containerPort: 8889
@@ -94,49 +42,21 @@ ports:
   jaeger-grpc: { enabled: false }
   zipkin: { enabled: false }
 
-# =============================================================================
-# THE COLLECTOR CONFIG
-# -----------------------------------------------------------------------------
-# Read this top to bottom and you have the whole OpenTelemetry data model:
-#
-#   receivers   how data gets IN          (OTLP, Prometheus scrape, filelog...)
-#   processors  what happens in the MIDDLE (batch, enrich, drop, limit)
-#   connectors  one pipeline's OUTPUT feeding another pipeline's INPUT
-#   exporters   where data goes OUT        (Tempo, Loki, Prometheus, stdout)
-#   service.pipelines  which of the above are actually wired together
-#
-# The one rule that explains 90% of "why is my config not working":
-# DECLARING A COMPONENT DOES NOTHING. Only listing it in a pipeline turns it
-# on. You can define ten exporters and ship to none of them.
-# =============================================================================
 config:
   receivers:
     otlp:
       protocols:
-        # gRPC :4317 — Envoy Gateway, the Go backend, and the node agents.
         grpc:
           endpoint: ${env:MY_POD_IP}:4317
-        # HTTP :4318 — the Python ai-service. Same protobuf payload, different
-        # transport. OTLP/HTTP is curl-able, which makes it far easier to debug.
         http:
           endpoint: ${env:MY_POD_IP}:4318
 
   processors:
-    # ORDER MATTERS, and memory_limiter is always first. If the Collector is
-    # about to run out of memory it starts refusing data here rather than
-    # dying — a Collector that crashes loses everything it was holding, which
-    # is strictly worse than one that drops the newest batch.
     memory_limiter:
       check_interval: 1s
       limit_percentage: 80
       spike_limit_percentage: 25
 
-    # Attach k8s.namespace.name / k8s.pod.name / k8s.deployment.name by looking
-    # the sender's IP up against the API server. This is how a span from
-    # "ai-service" learns whether it came from the raw or the Helm stack —
-    # without it, the two stacks are indistinguishable in Tempo.
-    #
-    # NOTE: renamed from `k8sattributes` in collector-contrib v0.149.0.
     k8s_attributes:
       auth_type: serviceAccount
       passthrough: false
@@ -150,18 +70,11 @@ config:
         - sources:
             - from: connection
 
-    # Batching is not optional in production. One network round trip per span
-    # will melt both the Collector and whatever it exports to.
     batch:
       send_batch_size: 1024
       timeout: 5s
 
   connectors:
-    # A CONNECTOR is an exporter on one pipeline and a receiver on another.
-    # This one consumes traces and produces RED metrics (Rate, Errors,
-    # Duration) — so you get per-service latency histograms without adding a
-    # single line of metrics code to any application. It is also what draws
-    # Grafana's service graph.
     span_metrics:
       histogram:
         explicit:
@@ -178,8 +91,6 @@ config:
       tls:
         insecure: true   # in-cluster traffic; mTLS is a service-mesh concern
 
-    # Loki 3.x speaks OTLP natively at /otlp — no Promtail, no loki exporter,
-    # and trace_id arrives as structured metadata rather than text to regex.
     otlp_http/loki:
       endpoint: http://loki.observability.svc.cluster.local:3100/otlp
 
@@ -187,22 +98,15 @@ config:
       endpoint: http://prometheus-operated.observability.svc.cluster.local:9090/api/v1/write
       tls:
         insecure: true
-      # Copies k8s.namespace.name and friends onto every metric as labels.
       resource_to_telemetry_conversion:
         enabled: true
 
-    # Prints telemetry to the Collector's own stdout. Add it to a pipeline and
-    # `kubectl logs deploy/otel-collector-gateway -f` shows raw spans scrolling
-    # past — the fastest way to answer "is anything arriving at all?".
-    # Chapter 11 has you do exactly that.
     debug:
       verbosity: basic
 
   service:
     telemetry:
       metrics:
-        # The Collector's own metrics, scraped by the ServiceMonitor in
-        # manifests/. Observability needs observability.
         readers:
           - pull:
               exporter:
@@ -214,13 +118,9 @@ config:
       traces:
         receivers: [otlp]
         processors: [memory_limiter, k8s_attributes, batch]
-        # Two destinations: Tempo stores the spans, spanmetrics turns them into
-        # metrics. Same data, two uses — this is the connector in action.
         exporters: [otlp_grpc/tempo, span_metrics]
 
       metrics:
-        # Note spanmetrics appears here as a RECEIVER. Its output feeds this
-        # pipeline's input; that is the whole idea of a connector.
         receivers: [otlp, span_metrics]
         processors: [memory_limiter, k8s_attributes, batch]
         exporters: [prometheus_remote_write]

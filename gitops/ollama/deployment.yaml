@@ -1,10 +1,3 @@
-# Ollama — a shared, in-cluster model server (like Envoy Gateway, it's platform
-# infra used by all app stacks, not part of any one app). It exposes an
-# OpenAI-compatible API on :11434, so the ai-service talks to it with plain
-# OpenAI-style requests.
-#
-# CPU-only, small model (llama3.2:1b, ~1.3 GB). Free and self-contained — no GPU,
-# no API key. Trade-off: modest quality and slower than a hosted API.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,15 +17,6 @@ spec:
       labels:
         app: ollama
     spec:
-      # Pull the model in an initContainer, not in the app container.
-      #
-      # An initContainer must SUCCEED before the app container starts. That
-      # buys three things over the old "serve & pull & wait" one-liner:
-      #   - the pull isn't competing with the server for the same CPU limit
-      #   - the main container starts already warm, so readiness goes green in
-      #     seconds instead of minutes
-      #   - a failed pull is a loud Init:CrashLoopBackOff instead of a pod that
-      #     sits Running-but-NotReady for ten minutes and then gives up quietly
       initContainers:
         - name: pull-model
           image: ollama/ollama:0.12.6
@@ -53,12 +37,7 @@ spec:
               mountPath: /root/.ollama
       containers:
         - name: ollama
-          # Pinned, not :latest. A floating tag makes kubelet default to
-          # imagePullPolicy: Always, so every restart re-pulls ~1.5 GB against
-          # Docker Hub's anonymous rate limit — and a rate-limit hit is an
-          # ImagePullBackOff, which looks exactly like the bug this file's
-          # PVC used to cause. It also breaks GitOps: with :latest, what is
-          # actually running is unknowable from Git.
+          # Pinned tag: :latest forces pullPolicy Always -> Docker Hub rate limit -> ImagePullBackOff.
           image: ollama/ollama:0.12.6
           imagePullPolicy: IfNotPresent
           ports:
@@ -66,22 +45,12 @@ spec:
           env:
             - name: OLLAMA_MODEL
               value: llama3.2:1b
-            # Keep the model resident in RAM. The default is 5m, after which
-            # Ollama unloads it and the next request pays a multi-second reload
-            # before the first token. That reload appears nowhere in the logs
-            # and reads as "the AI is just randomly slow sometimes" — you can
-            # see it as a fat span in Tempo once tracing is on (chapter 13).
             - name: OLLAMA_KEEP_ALIVE
               value: "-1"
             - name: OLLAMA_MAX_LOADED_MODELS
               value: "1"
-            # One CPU-bound generation at a time; queue the rest. Two parallel
-            # generations on two vCPUs are each half as fast, not twice as good.
             - name: OLLAMA_NUM_PARALLEL
               value: "1"
-          # startupProbe absorbs the cold start; readiness then runs on a tight
-          # loop forever after. That split is the whole point of having both —
-          # a long grace period at boot WITHOUT a long grace period for life.
           startupProbe:
             httpGet:
               path: /api/tags
@@ -106,19 +75,6 @@ spec:
               cpu: "1"          # inference is CPU-bound; reserve a real core
               memory: 2Gi
             limits:
-              # NEVER equal to node capacity. The old limit was "2" on a
-              # 2-vCPU node, which let Ollama consume the entire machine during
-              # generation and starve the kubelet, the CNI, and every liveness
-              # probe on that node — producing restarts and NotReady flaps that
-              # look like unrelated cluster problems.
-              #
-              # Worth knowing: t3 is BURSTABLE. A t3.large earns 36 CPU credits
-              # an hour, i.e. ~0.6 vCPU sustained across the whole node. Under
-              # continuous inference you will exhaust credits and get throttled
-              # no matter what this number says. The chapter-13 dashboard plots
-              # container_cpu_cfs_throttled_seconds_total so you can watch it
-              # happen; the production answer is a non-burstable instance
-              # family (c5/c6i) in its own node group.
               cpu: "1500m"
               memory: 4Gi       # 8 GiB nodes: room for a 3b model without OOMKill
           volumeMounts:

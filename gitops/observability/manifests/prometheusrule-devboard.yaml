@@ -1,15 +1,3 @@
-# Alerting rules.
-#
-# The two rules in the "ollama" group below are the punchline of this whole
-# course: they detect, automatically and in under five minutes, the exact bug
-# that motivated building an observability stack in the first place — a PVC
-# with no storageClassName, sitting Pending, taking the model server down while
-# every health check in the cluster stayed green.
-#
-# Note also what these rules are NOT. Dependency health is REPORTED here, never
-# enforced by a readiness probe (see the long comment in
-# k8s/ai-service-deployment.yml). An alert wakes a human; a coupled readiness
-# probe turns one component's outage into a whole tier's outage.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -22,10 +10,6 @@ spec:
     - name: ollama
       rules:
         - alert: AIModelStorageUnbound
-          # THE bug. A PVC that cannot bind means the pod never schedules,
-          # which means /api/ai fails while ai-service reports perfectly
-          # healthy. Before this rule existed, the only symptom was a user
-          # saying "the AI is broken" and no signal anywhere agreeing.
           expr: kube_persistentvolumeclaim_status_phase{namespace="ollama",phase="Pending"} == 1
           for: 5m
           labels:
@@ -48,9 +32,6 @@ spec:
             runbook: "kubectl -n ollama get pvc,pod && kubectl -n ollama logs deploy/ollama"
 
         - alert: AIModelServerThrottled
-          # t3 is burstable: a t3.large sustains ~0.6 vCPU across the node once
-          # its CPU credits are gone. Sustained inference exhausts them, and
-          # the only symptom is "the AI got slow" — invisible without this.
           expr: |
             rate(container_cpu_cfs_throttled_seconds_total{namespace="ollama",container="ollama"}[5m]) > 0.5
           for: 10m
@@ -66,10 +47,6 @@ spec:
     - name: devboard-app
       rules:
         - alert: AIServiceHighErrorRate
-          # Derived from SPANS by the spanmetrics connector, not from any
-          # metrics code in the app. This is what makes it trustworthy: the
-          # app's own ai_service_requests_total counter increments before the
-          # stream runs and can never observe a failure (see chapter 12).
           expr: |
             sum(rate(traces_span_metrics_calls_total{service_name="ai-service",status_code="STATUS_CODE_ERROR"}[5m]))
               /
@@ -83,9 +60,6 @@ spec:
             runbook: "Open Tempo, filter service.name=ai-service status=error, read the deepest span"
 
         - alert: PostgresSecretMissing
-          # ESO not syncing means pods sit in CreateContainerConfigError. Brief
-          # occurrences are normal on first boot (see chapter 06); sustained
-          # ones mean IAM, the ClusterSecretStore, or the secret name is wrong.
           expr: |
             kube_pod_container_status_waiting_reason{namespace=~"devboard|devboard-helm",reason="CreateContainerConfigError"} == 1
           for: 10m

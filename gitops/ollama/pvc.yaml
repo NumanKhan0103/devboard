@@ -1,4 +1,3 @@
-# Persists the downloaded model so a pod restart doesn't re-pull ~1.3 GB.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -7,17 +6,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  # This line is why the AI assistant used to fail on EKS and nowhere else.
-  #
-  # EKS ships a "gp2" StorageClass but does not mark it default. Postgres named
-  # its class explicitly (commit 320f097) and survived; this PVC did not, so it
-  # sat Pending forever, Ollama never scheduled, and every /api/ai call failed —
-  # while ai-service reported perfectly healthy, because its /health never
-  # touches the model server. Diagnose with:
-  #   kubectl -n ollama get pvc ollama-models     # must be Bound, not Pending
   storageClassName: gp3
   resources:
     requests:
-      # 10Gi, not 5: llama3.2:1b is ~1.3 GB, but 10-ai-feature.md invites you to
-      # try llama3.2:3b or gemma2:2b, and a second model fills a 5Gi volume.
       storage: 10Gi

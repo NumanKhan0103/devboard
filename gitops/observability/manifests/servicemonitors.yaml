@@ -1,14 +1,3 @@
-# ServiceMonitors — how Prometheus finds things to scrape.
-#
-# A ServiceMonitor is a CRD: you describe WHICH Services to scrape and the
-# Prometheus Operator writes the scrape_config for you and reloads Prometheus.
-# That is the "operator pattern" — Prometheus' configuration becomes just
-# another Kubernetes object, GitOps-managed like everything else, instead of a
-# prometheus.yml somebody edits by hand and forgets to reload.
-#
-# NOTE: endpoints[].port matches the Service's PORT NAME, not its number. The
-# DevBoard Services had unnamed ports until this chapter; naming them is the
-# one change the application manifests needed for metrics.
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -17,8 +6,6 @@ metadata:
   labels:
     app.kubernetes.io/part-of: devboard
 spec:
-  # Both DevBoard stacks, one rule. The k8s_attributes processor tags each
-  # series with its namespace, so raw and Helm stay distinguishable.
   namespaceSelector:
     matchNames:
       - devboard
@@ -26,6 +13,7 @@ spec:
   selector:
     matchLabels:
       app: devboard-ai-service
+  # endpoints[].port matches the Service's port NAME, not its number.
   endpoints:
     - port: http
       path: /metrics
@@ -51,9 +39,6 @@ spec:
       path: /metrics
       interval: 30s
 ---
-# The Collector's own metrics. Observability needs observability: if the
-# Collector is dropping spans because it hit its memory limiter, this is the
-# only place that says so.
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -67,17 +52,11 @@ spec:
     matchLabels:
       app.kubernetes.io/name: opentelemetry-collector
   endpoints:
-    # :8888 is the Collector's internal telemetry (queue depth, dropped spans).
     - port: metrics
       interval: 30s
-      # :8889 is where spanmetrics publishes the RED metrics it derives from
-      # traces. Different port, different data, easy to confuse.
     - port: prometheus
       interval: 30s
 ---
-# Envoy Gateway's proxies publish their own metrics on :19001. This is where
-# "how many 5xx did the edge return" lives — the number the user actually felt,
-# as opposed to what any single service thinks it returned.
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:

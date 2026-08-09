@@ -1,17 +1,3 @@
-# OpenTelemetry Collector — AGENT role (a DaemonSet, one pod per node).
-#
-# Why a second Collector at all? Because of one capability nothing else has:
-# reading /var/log/pods on the node's own filesystem. That is how you collect
-# logs from processes that know nothing about OpenTelemetry — the Go backend's
-# log.Printf, Postgres, Envoy, Ollama, ArgoCD. No application cooperation
-# required, which is the entire appeal.
-#
-# It does NOT talk to Tempo or Loki. It forwards everything to the gateway,
-# which is the single place that knows where data goes. Change a backend and
-# you edit one file, not one file per node.
-#
-# Chart: open-telemetry/opentelemetry-collector 0.169.0
-
 mode: daemonset
 
 image:
@@ -21,24 +7,14 @@ command:
 
 fullnameOverride: otel-collector-agent
 
-# Presets are the chart's shorthand: each one injects a receiver, the volume
-# mounts it needs, and the RBAC it needs. Handy — but note that the gateway's
-# config is written out longhand instead, because there the config IS the
-# lesson. Here the plumbing is boilerplate and the preset is the better choice.
 presets:
-  # Tails /var/log/pods/**. Mounts the host path and adds the file_log receiver.
   logsCollection:
     enabled: true
     includeCollectorLogs: false
 
-  # Adds k8s.namespace.name / k8s.pod.name / k8s.deployment.name to every
-  # record by asking the API server which pod owns the log file. This is what
-  # makes {namespace="devboard"} work as a Loki query.
   kubernetesAttributes:
     enabled: true
 
-  # CPU, memory, disk, and network per node. Cheap, and it is what tells you
-  # whether "the AI is slow" is Ollama or the node underneath it.
   hostMetrics:
     enabled: true
 
@@ -55,8 +31,6 @@ config:
         exporters: [otlp/gateway]
       metrics:
         exporters: [otlp/gateway]
-      # The agent collects no traces: applications push those straight to the
-      # gateway. Routing them through here would add a hop and explain nothing.
       traces: null
 
 resources:
@@ -67,6 +41,5 @@ resources:
     cpu: 200m
     memory: 256Mi
 
-# Run on every node, including any that carry taints.
 tolerations:
   - operator: Exists

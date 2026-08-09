@@ -1,23 +1,4 @@
-# Signal source #1 of 3: the edge proxy.
-#
-# There is NO application code here at all. Envoy already knows how to produce
-# spans and structured access logs; we are only telling it where to send them.
-# This is the cheapest observability you will ever buy, and it covers every
-# request that enters the cluster — including requests to services nobody has
-# instrumented yet.
-#
-# ⚠️ READ BEFORE APPLYING. The EnvoyProxy below attaches to the GatewayClass,
-# so it applies to EVERY Gateway of class "envoy" — both DevBoard stacks. A bad
-# telemetry config therefore takes down BOTH public URLs. Check with:
-#
-#   kubectl get gatewayclass envoy -o yaml     # look for Accepted=True
-#
-# and if it is Accepted=False, detach it immediately:
-#
-#   kubectl patch gatewayclass envoy --type=json \
-#     -p '[{"op":"remove","path":"/spec/parametersRef"}]'
-#
-# then fix Git. Knowing the rollback before you need it is the point.
+# Attaches to the GatewayClass - affects every envoy Gateway. Rollback: gitops/11-observability.md.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -26,10 +7,6 @@ metadata:
 spec:
   telemetry:
     tracing:
-      # 100 = trace every request. Correct for a teaching cluster where you
-      # want the trace you just generated to actually be there. In production
-      # you would sample — either here, or better, tail-sample in the Collector
-      # so you keep 100% of the errors and slow requests and 1% of the rest.
       samplingRate: 100
       provider:
         type: OpenTelemetry
@@ -52,8 +29,6 @@ spec:
       settings:
         - format:
             type: Text
-            # trace_id is included on purpose: it is what lets you pivot from
-            # an access log line straight into the trace in Grafana.
             text: |
               [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %DURATION% "%UPSTREAM_HOST%" trace_id=%REQ(TRACEPARENT)%
           sinks:
@@ -66,10 +41,6 @@ spec:
                 resources:
                   k8s.cluster.name: devboard
 ---
-# Attaching the EnvoyProxy above to the GatewayClass. This replaces the plain
-# GatewayClass from gitops/gateway/gatewayclass.yaml — parametersRef is how
-# Gateway API lets an implementation take vendor-specific configuration
-# without polluting the portable spec.
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
@@ -82,10 +53,6 @@ spec:
     name: proxy-telemetry
     namespace: envoy-gateway-system
 ---
-# Cross-namespace references are denied by default in Gateway API — a namespace
-# has to opt IN to being referenced. Without this, the EnvoyProxy's backendRefs
-# into "observability" are silently refused and you get no traces with no error
-# pointing at the cause.
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:

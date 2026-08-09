@@ -1,17 +1,4 @@
-# Tempo — trace storage.
-#
-# Chart: grafana-community/tempo 2.2.3  (single binary mode)
-#
-# NOTE the repo: grafana.github.io/helm-charts is FROZEN. The tempo, loki and
-# grafana charts moved to grafana-community.github.io/helm-charts. The old repo
-# still serves ancient versions, which is a confusing way to fail.
-
-# Without this the Service is named after the Helm RELEASE, which under ArgoCD
-# is the Application name — so you get "observability-tempo", not "tempo", and
-# every reference to tempo.observability.svc.cluster.local fails DNS. The
-# Collector's symptom for that is a cryptic
-#   rpc error: code = Unavailable desc = no children to pick from
-# which says nothing about DNS at all. Pin the name instead of guessing it.
+# fullnameOverride: without it the Service is named after the release and tempo DNS fails.
 fullnameOverride: tempo
 
 tempo:
@@ -19,13 +6,6 @@ tempo:
 
   storage:
     trace:
-      # Local disk on a PVC, not S3.
-      #
-      # S3 would need a bucket, an IAM role, and lifecycle policies — three AWS
-      # concepts that have nothing to do with observability, plus real money and
-      # an orphaned bucket at teardown (gitops/15-cleanup.md already fights
-      # orphaned EBS volumes and NLBs). 48h of local traces is honest for a
-      # teaching cluster.
       backend: local
       wal:
         path: /var/tempo/wal
@@ -38,9 +18,6 @@ tempo:
         grpc:
           endpoint: 0.0.0.0:4317
 
-  # Generates service-graph and span metrics inside Tempo. We already do this
-  # in the Collector with the spanmetrics connector, so leave it off — running
-  # both produces two sets of the same metric with different names.
   metricsGenerator:
     enabled: false
 
