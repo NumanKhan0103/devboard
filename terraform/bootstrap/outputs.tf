@@ -13,10 +13,7 @@ output "backend_hcl" {
 
     encrypt = true
 
-    # S3-native state locking. Terraform writes a <key>.tflock object next to
-    # the state and uses S3 conditional writes to make the check-and-set
-    # atomic. GA since Terraform 1.11 — this is what replaced the DynamoDB
-    # lock table. No second resource, no second bill, nothing to forget.
+    # S3-native state locking, GA since Terraform 1.11. Replaced the DynamoDB lock table.
     use_lockfile = true
   EOT
 }

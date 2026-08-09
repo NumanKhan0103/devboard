@@ -1,5 +1,3 @@
-# Cluster ------------------------------------------------------------------
-
 output "cluster_name" {
   description = "EKS cluster name"
   value       = module.eks.cluster_name
@@ -20,8 +18,6 @@ output "oidc_provider_arn" {
   value       = module.eks.oidc_provider_arn
 }
 
-# Networking ---------------------------------------------------------------
-
 output "vpc_id" {
   description = "VPC ID"
   value       = module.vpc.vpc_id
@@ -37,8 +33,6 @@ output "public_subnets" {
   value       = module.vpc.public_subnets
 }
 
-# Secrets ------------------------------------------------------------------
-
 output "postgres_secret_name" {
   description = "Secrets Manager secret name the ExternalSecret must reference"
   value       = aws_secretsmanager_secret.postgres.name
@@ -53,8 +47,6 @@ output "external_secrets_role_arn" {
   description = "IAM role External Secrets Operator assumes via its Pod Identity association"
   value       = module.external_secrets_pod_identity.iam_role_arn
 }
-
-# Copy-paste commands -------------------------------------------------------
 
 output "configure_kubectl" {
   description = "Point kubectl at the new cluster"

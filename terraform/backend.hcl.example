@@ -1,7 +1,4 @@
-# Copy to backend.hcl (gitignored) and fill in your bucket, or generate it:
-#   terraform -chdir=bootstrap output -raw backend_hcl > backend.hcl
-#
-# Then:  terraform init -backend-config=backend.hcl
+# Generate: terraform -chdir=bootstrap output -raw backend_hcl > backend.hcl
 
 bucket = "devboard-tfstate-<your-account-id>-us-west-2"
 key    = "devboard/mega-project/terraform.tfstate"
@@ -9,8 +6,5 @@ region = "us-west-2"
 
 encrypt = true
 
-# S3-native state locking. Terraform writes a <key>.tflock object next to the
-# state and uses S3 conditional writes to make the check-and-set atomic. GA
-# since Terraform 1.11 — this is what replaced the DynamoDB lock table. No
-# second resource, no second bill, nothing to forget to create.
+# S3-native state locking, GA since Terraform 1.11. Replaced the DynamoDB lock table.
 use_lockfile = true
