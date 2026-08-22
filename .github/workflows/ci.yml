@@ -97,8 +97,9 @@ jobs:
             
             # 6) Run Build
             - name: Run Build
-              run: go build -o app ./cmd/devboard
               working-directory: backend
+              run: go build -o app ./cmd/devboard/backend
+              
 
             # 7) docker push
             - name: Login to Docker Hub
