@@ -14,13 +14,13 @@ jobs:
 
     steps:
       - name: Code Checkout
-        uses: actions/checkout@v7  
+        uses: actions/checkout@v4
 
       - name: Copy Example Env to main env
         run: cp .env.example .env
 
       - name: Docker Setup [Login]
-        uses: docker/login-action@v4 
+        uses: docker/login-action@v3
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
