@@ -103,7 +103,7 @@ jobs:
             # 7) Run Build
             - name: Run Build
               working-directory: backend
-              run: go build -o app ./cmd/devboard
+              run: go build -o app .
               
 
             # 8) docker push
