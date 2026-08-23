@@ -50,6 +50,19 @@ jobs:
               run: npm run build --if-present
               working-directory: frontend
 
+            # 7) docker push
+            - name: Login to Docker Hub
+              uses: docker/login-action@v4
+              with:
+                username: ${{ vars.DOCKERHUB_USERNAME }}
+                password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+            - name: Build and push
+              uses: docker/build-push-action@v7
+              with:
+                context: frontend
+                push: true
+                tags: ${{ vars.DOCKERHUB_USERNAME }}/devboard-frontend:latest
 
     backend:
         runs-on: ubuntu-latest
@@ -94,25 +107,9 @@ jobs:
             - name: Run Build
               working-directory: backend
               run: go build -o app .
+              
 
-    docker-push:
-        needs: [frontend, backend]
-        runs-on: ubuntu-latest
-        timeout-minutes: 10
-        strategy:
-            # front or backend fail never run this
-            fail-fast: true
-            matrix:
-                folder: [frontend, backend]
-        steps:
-            # 1) Clone code 
-            - name: Checkout
-              uses: actions/checkout@v7
-              with:
-                persist-credentials: false
-                fetch-depth: 0
-
-             # 2) docker images push to docker hub
+            # 8) docker push
             - name: Login to Docker Hub
               uses: docker/login-action@v4
               with:
@@ -122,12 +119,11 @@ jobs:
             - name: Build and push
               uses: docker/build-push-action@v7
               with:
-                context: ${{ matrix.folder}}
+                context: backend
                 push: true
-                tags: ${{ vars.DOCKERHUB_USERNAME }}/devboard-${{ matrix.folder}}:latest
-                
+                tags: ${{ vars.DOCKERHUB_USERNAME }}/devboard-backend:latest
+
     deploy:
-      # Only after front or backend or docker push success, run this
-      needs: [frontend, backend, docker-push]
+      needs: [frontend, backend]
       uses: ./.github/workflows/cd.yml
       secrets: inherit
