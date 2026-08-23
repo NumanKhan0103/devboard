@@ -2,17 +2,22 @@
 name: CD
 
 on:
-  workflow_run:
-    workflows: ["CI"]  # Must match 'name: ...' inside ci.yml exactly
-    types: ["completed"]
-    branches: 
-      - advanced
+  workflow_call:
+    inputs:
+      success:
+        description: 'Whether the CI workflow was successful'
+        required: true
+        type: boolean
+
+  # workflow_run:
+  #   workflows: ["CI"]  # Must match 'name: ...' inside ci.yml exactly
+  #   types: ["completed"]
+  #   branches: 
+  #     - advanced
 
 jobs:
   deploy:
     
-    if: github.event.workflow_run.conclusion == 'success'
-
     runs-on: self-hosted
 
     steps:
