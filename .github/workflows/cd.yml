@@ -5,11 +5,14 @@ on:
   workflow_run:
     workflows: ["CI"]  # Must match 'name: ...' inside ci.yml exactly
     types: ["completed"]
-    branches: ["advanced"]
-  workflow_dispatch:   # Added so you can trigger and test manually in the Actions tab
+    branches: 
+      - advanced
 
 jobs:
   deploy:
+    
+    if: github.event.workflow_run.conclusion == 'success'
+
     runs-on: self-hosted
 
     steps:
