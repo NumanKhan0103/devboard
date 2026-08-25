@@ -2,15 +2,12 @@
 name: CI
 
 on:
-    # schedule:
-        # - cron: '15 2 * * *'
-    push:
+    workflow_dispatch:
+    # push:
         # paths:
             # - "**"
-            # - "!.github/workflows/*"
-        branches: [advanced]
-    pull_request:
-        branches: [advanced]
+            # - "!.github/workflows/cd.yml"
+        # branches: [advanced]
 
 jobs:
     frontend:
@@ -23,35 +20,15 @@ jobs:
               with:
                 persist-credentials: false
                 fetch-depth: 0
-            
-            # 2) Setup Node Js
-            - name: Setup Node.Js
-              uses: actions/setup-node@v7
-              with:
-                node-version: '22'
-                cache: 'npm'
-                cache-dependency-path: 'frontend/package-lock.json'
-            
-            # 3) Install dependencies
-            - name: Install dependencies
-              run: npm ci
-              working-directory: frontend
-                
-            # 4) Lint the code
-            - name: Run Eslint
-              run: npm run lint
-              working-directory: frontend
 
-            # 5) Run test case
-            - name: Run tests
-              run: npm run test --if-present
-              working-directory: frontend
+            # 2) Code Quality
+            - name: Run Code Quality
+              uses: ./.github/workflows/code-quality.yml
             
-            # 6) Run Build
+            # 3) Run Build
             - name: Run Build
               run: npm run build --if-present
               working-directory: frontend
-
 
     backend:
         runs-on: ubuntu-latest
@@ -63,36 +40,12 @@ jobs:
               with:
                 persist-credentials: false
                 fetch-depth: 0
-            
-            # 2) Setup Go
-            - name: Setup Go 1.22
-              uses: actions/setup-go@v7
-              with:
-                go-version: '1.22'
-                cache: TRUE
-                cache-dependency-path: 'backend/go.sum'
-            
-            # 3) Install dependencies
-            - name: Install dependencies
-              run: go mod download
-              working-directory: backend
                 
-            # 4) Lint the code
-            - name: Run go fmt
-              run: go fmt ./...
-              working-directory: backend
-
-            # 5) Run go vet
-            - name: Run Go Vet
-              run: go vet ./...
-              working-directory: backend
-              
-            # 6) Run test case
-            - name: Run tests
-              run: go test ./...
-              working-directory: backend
+            # 2) Code Quality
+            - name: Run Code Quality
+              uses: ./.github/workflows/code-quality.yml
             
-            # 7) Run Build
+            # 3) Run Build
             - name: Run Build
               working-directory: backend
               run: go build -o app .
@@ -129,8 +82,8 @@ jobs:
                 tags: ${{ vars.DOCKERHUB_USERNAME }}/devboard-${{ matrix.folder}}:latest
                 
     # Final deployment
-    deploy:
+    # deploy:
       # Only after front or backend or docker push success, run this
-      needs: [frontend, backend, docker-push]
-      uses: ./.github/workflows/cd.yml
-      secrets: inherit
+      # needs: [frontend, backend, docker-push]
+      # uses: ./.github/workflows/cd.yml
+      # secrets: inherit
