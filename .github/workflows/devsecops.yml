@@ -6,12 +6,18 @@ on:
     push:
         branches: [ master ]
 
+
+
 jobs:
+
     # Code Stage ( with shift left)
     code-quality:
         uses: ./.github/workflows/code-quality.yml
     
     # Secret Stage ( with shift left)
     secret-scanning:
+        permissions:
+            contents: read
+            security-events: write
         uses: ./.github/workflows/secret-scanning.yml
     
