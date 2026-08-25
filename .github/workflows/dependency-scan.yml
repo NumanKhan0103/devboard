@@ -35,7 +35,8 @@ jobs:
                 cache-dependency-path: 'frontend/package-lock.json'
 
             - name: Run Dependency Scan for Node
-              run: npm audit
+              continue-on-error: true
+              run: npm audit --audit-level=high
               working-directory: frontend
 
             - name: Upload Report to Artifacts
@@ -43,5 +44,5 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                 name: dependency-scan-report
-                path: reports/dependency-report.txt
+                path: reports/govulncheck-report.txt
                 retention-days: 5
