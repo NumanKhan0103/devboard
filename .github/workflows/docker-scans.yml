@@ -26,6 +26,7 @@ jobs:
               with:
                 username: ${{ vars.DOCKERHUB_USERNAME }}
                 password: ${{ secrets.DOCKERHUB_TOKEN }}
+                logout: true
 
             - name: Docker Image Build
               run: docker build -t ${{ vars.DOCKERHUB_USERNAME }}/devboard-${{ matrix.folder}}:latest .
