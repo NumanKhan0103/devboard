@@ -21,3 +21,6 @@ jobs:
             security-events: write
         uses: ./.github/workflows/secret-scanning.yml
     
+    dependency-check:
+        uses: ./.github/workflows/dependency-scan.yml
+    
