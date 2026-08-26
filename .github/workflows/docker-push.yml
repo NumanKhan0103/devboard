@@ -34,10 +34,3 @@ jobs:
                 context: ${{ matrix.folder}}
                 push: true
                 tags: ${{ vars.DOCKERHUB_USERNAME }}/devboard-${{ matrix.folder}}:latest
-                
-    # Final deployment
-    # deploy:
-      # Only after front or backend or docker push success, run this
-      # needs: [frontend, backend, docker-push]
-      # uses: ./.github/workflows/cd.yml
-      # secrets: inherit

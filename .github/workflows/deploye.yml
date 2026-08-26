@@ -4,12 +4,6 @@ name: CD
 on:
   workflow_call:
 
-  # workflow_run:
-  #   workflows: ["CI"]  # Must match 'name: ...' inside ci.yml exactly
-  #   types: ["completed"]
-  #   branches: 
-  #     - advanced
-
 jobs:
   deploy:
 
