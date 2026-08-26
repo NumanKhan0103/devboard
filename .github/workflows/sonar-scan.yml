@@ -1,0 +1,21 @@
+# Goal - to check the overall code quality and reliability
+
+name: Sonar Qube Scan
+
+on:
+    workflow_call:
+
+jobs:
+    sonar:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Code Checkout
+              uses: actions/checkout@v6
+              with:
+                fetch-depth: 0
+            
+            - name: SonarQube Scan
+              uses: SonarSource/sonarqube-scan-action@v8.2.0
+              env:
+                SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+                SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
