@@ -9,7 +9,8 @@ pipeline{
         stage("Code"){
             steps{
                 echo "Code cloning"
-                git url: "https://github.com/NumanKhan0103/devboard.git", branch: "master"
+                // git url: "https://github.com/NumanKhan0103/devboard.git", branch: "master"
+                checkout scm
             }
         }
         stage("Login"){
